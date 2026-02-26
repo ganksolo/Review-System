@@ -214,3 +214,16 @@
 3. WHEN 执行数据库查询 THEN THE API_Service SHALL 使用异步查询方法
 4. WHEN 执行 I/O 操作 THEN THE API_Service SHALL 使用异步操作避免阻塞
 5. THE API_Service SHALL 配置 uvicorn 使用适当的工作进程数
+
+### Requirement 16: 动态规则库 API
+
+**User Story:** 作为交易者，我希望通过 API 获取动态规则库数据（永久排除清单、正确行为清单、环境错配提醒），以便前端规则库面板展示实时规则。
+
+#### Acceptance Criteria
+
+1. WHEN 用户发送 GET 请求到 /api/rules/exclusions THEN THE API_Service SHALL 返回所有 permanent_exclusion_flag 为 true 的交易记录
+2. WHEN 用户发送 GET 请求到 /api/rules/correct-behaviors THEN THE API_Service SHALL 返回所有 result_type 为"正确盈利"的交易记录
+3. WHEN 用户发送 GET 请求到 /api/rules/environment-mismatches THEN THE API_Service SHALL 返回所有 environment_mismatch_flag 为 true 的交易记录
+4. WHEN 用户发送 GET 请求到 /api/rules/summary THEN THE API_Service SHALL 返回规则库的汇总统计（各类规则数量、最近更新时间）
+5. WHEN 查询规则库 THEN THE API_Service SHALL 自动排除已软删除的记录
+6. WHEN 查询规则库 THEN THE API_Service SHALL 只返回当前用户的记录

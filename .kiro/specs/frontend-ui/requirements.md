@@ -188,6 +188,20 @@
 6. THE Frontend_Application SHALL 使用虚拟滚动技术处理长列表，仅渲染可见区域的列表项
 7. WHEN 页面包含大量数据 THEN THE Frontend_Application SHALL 使用分页或无限滚动减少单次渲染的数据量
 
+### Requirement 13: 渲染策略 (SSR/CSR)
+
+**User Story:** 作为用户，我希望不同页面根据其特性采用最优的渲染策略，以获得最佳的加载速度和交互体验。
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL 使用 SSR 渲染交易列表页面，确保首屏快速加载
+2. THE Frontend SHALL 使用 CSR 渲染交易录入表单，优化表单交互性能
+3. THE Frontend SHALL 使用 SSR 渲染动态规则库面板（PRD 要求），确保展示最新规则数据
+4. THE Frontend SHALL 使用 CSR 渲染数据可视化仪表板，支持图表交互
+5. THE Frontend SHALL 使用 SSR 渲染交易详情页，优化数据加载
+6. THE Frontend SHALL 使用 SSR 渲染系统健康度报告页面
+7. WHEN 使用 SSR THEN THE Frontend SHALL 通过 TanStack Query 进行客户端 hydration 以支持后续交互
+
 ## Notes
 
 - 所有用户界面文本应支持国际化（i18n），优先支持中文
