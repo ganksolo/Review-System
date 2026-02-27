@@ -1,26 +1,166 @@
 @import "tailwindcss";
 
+/* ── Design System: Trading Review System ────────────────────
+   Source: ui-ux-pro-max skill
+   Style:  Dark Mode (OLED)
+   Colors: #1E40AF primary, #3B82F6 secondary, #F59E0B CTA
+   Fonts:  Fira Sans (body) + Fira Code (data)
+   ──────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Typography */
+  --font-body: "Fira Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", "Fira Mono", monospace;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Core palette */
+  --color-primary: #1E40AF;
+  --color-primary-light: #3B82F6;
+  --color-primary-glow: rgba(59, 130, 246, 0.15);
+  --color-cta: #F59E0B;
+  --color-cta-hover: #D97706;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Trading semantics */
+  --color-bullish: #26A69A;
+  --color-bearish: #EF5350;
+  --color-neutral: #64748B;
+
+  /* Surface (OLED dark) */
+  --color-bg-base: #030712;
+  --color-bg-surface: #0a0f1e;
+  --color-bg-card: rgba(15, 23, 42, 0.6);
+  --color-bg-card-hover: rgba(15, 23, 42, 0.8);
+  --color-border: rgba(59, 130, 246, 0.12);
+  --color-border-hover: rgba(59, 130, 246, 0.25);
+
+  /* Text */
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #475569;
+
+  /* Effects */
+  --glow-primary: 0 0 20px rgba(30, 64, 175, 0.3);
+  --glow-cta: 0 0 20px rgba(245, 158, 11, 0.25);
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 300ms ease-out;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Respect reduced motion ───────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Mono font class for data/numbers ─────────────────────── */
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* ── Scrollbar (OLED dark) ────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+/* ── Interactive elements: cursor + transitions ───────────── */
+a,
+button,
+[role="button"],
+select,
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+a,
+button {
+  transition: all var(--transition-normal);
+}
+
+/* ── Focus ring (visible for keyboard nav) ────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Skeleton loader animation ────────────────────────────── */
+@keyframes skeleton-pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(30, 64, 175, 0.08) 0%, rgba(30, 64, 175, 0.15) 50%, rgba(30, 64, 175, 0.08) 100%);
+  animation: skeleton-pulse 2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Card glow on hover ───────────────────────────────────── */
+.card-glow {
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.card-glow:hover {
+  box-shadow: var(--glow-primary);
+  border-color: var(--color-border-hover);
+}
+
+/* ── PnL color utilities ──────────────────────────────────── */
+.pnl-bullish {
+  color: var(--color-bullish);
+}
+
+.pnl-bearish {
+  color: var(--color-bearish);
+}
+
+.pnl-neutral {
+  color: var(--color-neutral);
+}
+
+/* ── Glow text for important data ─────────────────────────── */
+.text-glow-primary {
+  text-shadow: 0 0 10px rgba(30, 64, 175, 0.5);
+}
+
+.text-glow-cta {
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }

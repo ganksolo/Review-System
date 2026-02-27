@@ -21,12 +21,12 @@ class Settings(BaseSettings):
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
 
-    # LLM Configuration
+    # LLM Configuration (OpenRouter)
     LLM_API_KEY: str = ""
-    LLM_API_BASE: str = "https://api.openai.com/v1"
-    LLM_MODEL: str = "gpt-4"
+    LLM_API_BASE: str = "https://openrouter.ai/api/v1"
+    LLM_MODEL: str = "deepseek/deepseek-chat-v3-0324"
     LLM_MAX_RETRIES: int = 3
-    LLM_TIMEOUT: int = 30
+    LLM_TIMEOUT: int = 60
     LLM_MAX_TOKENS: int = 4096
 
     # Application

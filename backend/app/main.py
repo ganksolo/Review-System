@@ -8,11 +8,20 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.errors import (
+    BusinessValidationError,
+    OptimisticLockError,
+    TradeNotFoundError,
+)
 from app.api.routes.health import router as health_router
+from app.api.routes.trades import router as trades_router
+from app.api.routes.rules import router as rules_router
+from app.api.routes.llm import router as llm_router
 
 # ── Logging ──────────────────────────────────────────────────────
 
@@ -64,7 +73,90 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# ── Global Exception Handler ────────────────────────────────────
+# ── Exception Handlers ───────────────────────────────────────────
+
+
+@app.exception_handler(TradeNotFoundError)
+async def trade_not_found_handler(request: Request, exc: TradeNotFoundError):
+    """404 — 交易记录不存在"""
+    return JSONResponse(
+        status_code=404,
+        content={
+            "success": False,
+            "message": str(exc),
+            "error": {
+                "code": "TRADE_NOT_FOUND",
+                "details": {"trade_id": str(exc.trade_id)},
+            },
+        },
+    )
+
+
+@app.exception_handler(OptimisticLockError)
+async def optimistic_lock_handler(request: Request, exc: OptimisticLockError):
+    """409 — 乐观锁版本冲突"""
+    return JSONResponse(
+        status_code=409,
+        content={
+            "success": False,
+            "message": str(exc),
+            "error": {
+                "code": "OPTIMISTIC_LOCK_CONFLICT",
+                "details": {
+                    "expected_version": exc.expected,
+                    "actual_version": exc.actual,
+                },
+            },
+        },
+    )
+
+
+@app.exception_handler(BusinessValidationError)
+async def business_validation_handler(
+    request: Request, exc: BusinessValidationError
+):
+    """422 — 业务逻辑验证失败"""
+    error_details = {"message": str(exc)}
+    if exc.field:
+        error_details["field"] = exc.field
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": str(exc),
+            "error": {
+                "code": "BUSINESS_VALIDATION_ERROR",
+                "details": error_details,
+            },
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(
+    request: Request, exc: RequestValidationError
+):
+    """400 — Pydantic 请求数据验证失败"""
+    errors = []
+    for error in exc.errors():
+        errors.append(
+            {
+                "field": " → ".join(str(loc) for loc in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+        )
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "message": "请求数据验证失败",
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "details": errors,
+            },
+        },
+    )
 
 
 @app.exception_handler(Exception)
@@ -84,7 +176,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ── Routes ───────────────────────────────────────────────────────
 
 app.include_router(health_router, tags=["Health"])
-# TODO: app.include_router(trades_router, prefix="/api", tags=["Trades"])
+app.include_router(trades_router, prefix="/api", tags=["Trades"])
+app.include_router(rules_router, prefix="/api", tags=["Rules"])
+app.include_router(llm_router, prefix="/api", tags=["LLM"])
 
 # ── Startup Event ────────────────────────────────────────────────
 
