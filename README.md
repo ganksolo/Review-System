@@ -22,14 +22,25 @@ Review-System/
 │   │   ├── core/config.py    # 环境变量配置
 │   │   ├── db/session.py     # 数据库会话管理
 │   │   ├── models/           # SQLAlchemy ORM 模型
+│   │   ├── schemas/          # Pydantic 验证 schemas
+│   │   ├── services/         # 业务逻辑层
+│   │   ├── llm/              # LLM 分析模块
 │   │   ├── api/routes/       # API 端点
 │   │   └── middleware/       # 中间件
 │   ├── alembic/              # 数据库迁移
+│   ├── tests/                # 后端测试
+│   ├── examples/             # 示例代码
 │   ├── requirements.txt
+│   ├── pytest.ini            # pytest 配置
 │   ├── Procfile              # Railway 启动命令
 │   └── railway.toml          # Railway 部署配置
 ├── frontend/                 # Next.js 前端应用
-│   ├── src/app/              # App Router 页面
+│   ├── app/                  # App Router 页面
+│   ├── components/           # React 组件
+│   ├── lib/                  # 工具函数、hooks、API 客户端
+│   ├── types/                # TypeScript 类型定义
+│   ├── tests/                # 单元测试 (Vitest)
+│   ├── e2e/                  # E2E 测试 (Playwright)
 │   ├── package.json
 │   └── railway.toml          # Railway 部署配置
 ├── .env.example              # 环境变量参考
@@ -43,18 +54,32 @@ Review-System/
 
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL 14+
+- PostgreSQL 14+（需要已启动）
 
-### 后端
+### 1. 创建数据库
+
+```bash
+# 创建 PostgreSQL 数据库（如果尚未创建）
+createdb trading_review_system
+```
+
+### 2. 后端
 
 ```bash
 cd backend
+
+# 创建并激活虚拟环境
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate    # macOS/Linux
+# .venv\Scripts\activate     # Windows
+
+# 安装依赖
 pip install -r requirements.txt
 
-# 复制环境变量并修改
+# 复制环境变量并根据本地环境修改
 cp .env.example .env
+# 编辑 .env，修改 DATABASE_URL 为本地数据库连接:
+# DATABASE_URL=postgresql+asyncpg://你的用户名@localhost:5432/trading_review_system
 
 # 执行数据库迁移
 alembic upgrade head
@@ -63,7 +88,7 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 前端
+### 3. 前端
 
 ```bash
 cd frontend
@@ -76,11 +101,70 @@ echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 npm run dev
 ```
 
-访问:
+### 4. 访问
+
 - 前端: http://localhost:3000
 - 后端 API: http://localhost:8000
 - API 文档: http://localhost:8000/docs
 - 健康检查: http://localhost:8000/health
+
+## 测试
+
+### 后端测试
+
+后端测试使用 pytest + hypothesis（属性测试），需要连接真实 PostgreSQL 数据库。
+
+```bash
+cd backend
+source .venv/bin/activate
+
+# 运行所有测试
+python -m pytest tests/ -v
+
+# 运行测试并查看覆盖率
+python -m pytest tests/ --cov=app --cov-report=term-missing
+
+# 只运行特定测试文件
+python -m pytest tests/test_database.py -v         # 属性测试
+python -m pytest tests/test_trade_service.py -v     # Service 层测试
+python -m pytest tests/test_api.py -v               # API 集成测试
+python -m pytest tests/test_integration.py -v       # 数据库集成测试
+python -m pytest tests/test_benchmark.py -v         # 性能基准测试
+python -m pytest tests/test_schemas.py -v           # Schema 验证测试
+python -m pytest tests/test_llm.py -v               # LLM 模块测试
+```
+
+> **注意**: 测试默认连接 `postgresql+asyncpg://你的用户名@localhost:5432/trading_review_system`。
+> 可通过环境变量 `TEST_DATABASE_URL` 覆盖。测试使用事务回滚，不会污染数据库。
+
+### 前端单元测试
+
+前端单元测试使用 Vitest + React Testing Library。
+
+```bash
+cd frontend
+npm install
+
+# 运行所有单元测试
+npm test
+
+# 监听模式（开发时使用）
+npm run test:watch
+```
+
+### 前端 E2E 测试
+
+E2E 测试使用 Playwright，会自动启动 Next.js 开发服务器。
+
+```bash
+cd frontend
+
+# 首次运行需要安装 Playwright 浏览器
+npx playwright install
+
+# 运行 E2E 测试
+npm run test:e2e
+```
 
 ## Railway 部署
 
