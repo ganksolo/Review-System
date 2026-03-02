@@ -55,6 +55,6 @@
   - [x] 8.1 桌面端布局
   - [x] 8.2 平板/手机端自适应
 
-- [ ] 9. 测试
-  - [ ] 9.1 组件单元测试 (Vitest + React Testing Library)
-  - [ ] 9.2 E2E 测试 (Playwright — 表单提交流程)
+- [x] 9. 测试
+  - [x] 9.1 组件单元测试 (Vitest + React Testing Library)
+  - [x] 9.2 E2E 测试 (Playwright — 表单提交流程)
