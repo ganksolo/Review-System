@@ -19,7 +19,9 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.common import PaginatedResponse, PaginationInfo, StandardResponse
 from app.schemas.trade import (
     BulkCreateRequest,
@@ -34,9 +36,6 @@ from app.schemas.trade import (
 from app.services.trade_service import TradeService
 
 router = APIRouter()
-
-# ── 临时 user_id 常量 (认证系统完成前使用) ────────────────────────
-DEFAULT_USER_ID = "default-user"
 
 
 def get_service(db: AsyncSession = Depends(get_db)) -> TradeService:
@@ -54,9 +53,10 @@ def get_service(db: AsyncSession = Depends(get_db)) -> TradeService:
 )
 async def create_trade(
     data: TradeCreate,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.create_trade(DEFAULT_USER_ID, data)
+    trade = await service.create_trade(str(current_user.id), data)
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),
@@ -75,10 +75,11 @@ async def create_trade(
 )
 async def bulk_create_trades(
     body: BulkCreateRequest,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
     successes, failures = await service.bulk_create_trades(
-        DEFAULT_USER_ID, body.trades
+        str(current_user.id), body.trades
     )
     result = BulkCreateResponse(
         success_count=len(successes),
@@ -102,7 +103,6 @@ async def bulk_create_trades(
     summary="查询交易列表",
 )
 async def list_trades(
-    # 过滤参数
     stock_code: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
@@ -111,12 +111,11 @@ async def list_trades(
     pnl_flag: Optional[str] = Query(None),
     account_type: Optional[str] = Query(None),
     trade_cycle: Optional[str] = Query(None),
-    # 分页参数
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    # 排序参数
     sort_by: str = Query("entry_date"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
     filters = TradeFilters(
@@ -133,7 +132,7 @@ async def list_trades(
     sort = SortParams(sort_by=sort_by, order=order)
 
     trades, total = await service.get_trades(
-        DEFAULT_USER_ID, filters, pagination, sort
+        str(current_user.id), filters, pagination, sort
     )
 
     total_pages = math.ceil(total / page_size) if total > 0 else 0
@@ -161,9 +160,10 @@ async def list_trades(
 )
 async def get_trade(
     trade_id: UUID,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.get_trade_by_id(DEFAULT_USER_ID, trade_id)
+    trade = await service.get_trade_by_id(str(current_user.id), trade_id)
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),
@@ -182,9 +182,10 @@ async def get_trade(
 async def update_trade(
     trade_id: UUID,
     data: TradeUpdate,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.update_trade(DEFAULT_USER_ID, trade_id, data)
+    trade = await service.update_trade(str(current_user.id), trade_id, data)
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),
@@ -202,9 +203,10 @@ async def update_trade(
 )
 async def delete_trade(
     trade_id: UUID,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    await service.soft_delete_trade(DEFAULT_USER_ID, trade_id)
+    await service.soft_delete_trade(str(current_user.id), trade_id)
     return None
 
 
@@ -218,9 +220,10 @@ async def delete_trade(
 )
 async def restore_trade(
     trade_id: UUID,
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.restore_trade(DEFAULT_USER_ID, trade_id)
+    trade = await service.restore_trade(str(current_user.id), trade_id)
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),

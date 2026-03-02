@@ -100,6 +100,20 @@
 | ResultType | 正确盈利, 运气盈利, 执行亏损, 模式亏损 |
 | ErrorLevel | 执行层错误, 模式层错误, 环境层错误 |
 
+## 用户模型: User
+
+`users` 表存储系统用户信息，用于 JWT 认证。
+
+| 字段 | 类型 | 说明 |
+| ---- | ---- | ---- |
+| id | UUID | 主键，自动生成 UUID v4 |
+| email | String(255) | 唯一邮箱，带索引 |
+| username | String(100) | 用户名 |
+| hashed_password | String(255) | bcrypt 哈希后的密码 |
+| is_active | Boolean | 是否活跃（默认 true） |
+| created_at | TIMESTAMP(tz) | 创建时间 |
+| updated_at | TIMESTAMP(tz) | 更新时间 |
+
 ## 特性
 
 ### 软删除
@@ -168,15 +182,19 @@ backend/
 │   ├── models/
 │   │   ├── base.py          # SQLAlchemy DeclarativeBase
 │   │   ├── enums.py         # 所有枚举定义
-│   │   └── trade.py         # Trade ORM 模型
+│   │   ├── trade.py         # Trade ORM 模型
+│   │   └── user.py          # User ORM 模型
 │   ├── schemas/
+│   │   ├── auth.py          # 认证相关 Pydantic schemas
 │   │   └── trade.py         # Pydantic 验证 schemas
 │   ├── services/
 │   │   └── trade_service.py # 业务逻辑层
 │   ├── db/
 │   │   └── session.py       # 数据库会话管理
 │   └── core/
-│       └── errors.py        # 自定义异常
+│       ├── auth.py          # get_current_user 依赖注入
+│       ├── errors.py        # 自定义异常
+│       └── security.py      # JWT + bcrypt 工具函数
 ├── alembic/
 │   └── versions/            # 迁移脚本
 ├── tests/

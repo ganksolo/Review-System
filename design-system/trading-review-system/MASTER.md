@@ -6,9 +6,9 @@
 
 ---
 
-**Project:** Trading Review System
-**Generated:** 2026-02-27 16:37:03
-**Category:** Financial Dashboard
+**Project:** trading-review-system
+**Generated:** 2026-03-02 16:00:55
+**Category:** Fintech/Crypto
 
 ---
 
@@ -18,24 +18,24 @@
 
 | Role | Hex | CSS Variable |
 |------|-----|--------------|
-| Primary | `#1E40AF` | `--color-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| CTA/Accent | `#F59E0B` | `--color-cta` |
-| Background | `#F8FAFC` | `--color-background` |
-| Text | `#1E3A8A` | `--color-text` |
+| Primary | `#F59E0B` | `--color-primary` |
+| Secondary | `#FBBF24` | `--color-secondary` |
+| CTA/Accent | `#8B5CF6` | `--color-cta` |
+| Background | `#0F172A` | `--color-background` |
+| Text | `#F8FAFC` | `--color-text` |
 
-**Color Notes:** Blue data + amber highlights
+**Color Notes:** Gold trust + purple tech
 
 ### Typography
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.google.com/share?selection.family=Fira+Code:wght@400;500;600;700|Fira+Sans:wght@300;400;500;600;700)
+- **Heading Font:** IBM Plex Sans
+- **Body Font:** IBM Plex Sans
+- **Mood:** financial, trustworthy, professional, corporate, banking, serious
+- **Google Fonts:** [IBM Plex Sans + IBM Plex Sans](https://fonts.google.com/share?selection.family=IBM+Plex+Sans:wght@300;400;500;600;700)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 ```
 
 ### Spacing Variables
@@ -68,7 +68,7 @@
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #F59E0B;
+  background: #8B5CF6;
   color: white;
   padding: 12px 24px;
   border-radius: 8px;
@@ -85,8 +85,8 @@
 /* Secondary Button */
 .btn-secondary {
   background: transparent;
-  color: #1E40AF;
-  border: 2px solid #1E40AF;
+  color: #F59E0B;
+  border: 2px solid #F59E0B;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -99,7 +99,7 @@
 
 ```css
 .card {
-  background: #F8FAFC;
+  background: #0F172A;
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
@@ -125,9 +125,9 @@
 }
 
 .input:focus {
-  border-color: #1E40AF;
+  border-color: #F59E0B;
   outline: none;
-  box-shadow: 0 0 0 3px #1E40AF20;
+  box-shadow: 0 0 0 3px #F59E0B20;
 }
 ```
 
@@ -163,18 +163,18 @@
 
 ### Page Pattern
 
-**Pattern Name:** AI Personalization Landing
+**Pattern Name:** Lead Magnet + Form
 
-- **Conversion Strategy:** 20%+ conversion with personalization. Requires analytics integration. Fallback for new users.
-- **CTA Placement:** Context-aware placement based on user segment
-- **Section Order:** 1. Dynamic hero (personalized), 2. Relevant features, 3. Tailored testimonials, 4. Smart CTA
+- **Conversion Strategy:** Form fields ≤ 3 for best conversion. Offer valuable lead magnet preview. Show form submission progress.
+- **CTA Placement:** Form CTA: Submit button
+- **Section Order:** 1. Hero (benefit headline), 2. Lead magnet preview (ebook cover, checklist, etc), 3. Form (minimal fields), 4. CTA submit
 
 ---
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Light mode default
-- ❌ Slow rendering
+- ❌ Light backgrounds
+- ❌ No security indicators
 
 ### Additional Forbidden Patterns
 

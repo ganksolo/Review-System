@@ -11,15 +11,14 @@ Endpoints:
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.common import StandardResponse
 from app.schemas.trade import RulesSummary, TradeResponse
 from app.services.trade_service import TradeService
 
 router = APIRouter()
-
-# ── 临时 user_id 常量 (认证系统完成前使用) ────────────────────────
-DEFAULT_USER_ID = "default-user"
 
 
 def get_service(db: AsyncSession = Depends(get_db)) -> TradeService:
@@ -36,9 +35,10 @@ def get_service(db: AsyncSession = Depends(get_db)) -> TradeService:
     description="返回所有标记为 permanent_exclusion_flag=true 的交易记录",
 )
 async def get_exclusions(
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trades = await service.get_permanent_exclusions(DEFAULT_USER_ID)
+    trades = await service.get_permanent_exclusions(str(current_user.id))
     return StandardResponse(
         success=True,
         data=[TradeResponse.model_validate(t) for t in trades],
@@ -56,9 +56,10 @@ async def get_exclusions(
     description="返回所有 result_type=正确盈利 的交易记录",
 )
 async def get_correct_behaviors(
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trades = await service.get_correct_behaviors(DEFAULT_USER_ID)
+    trades = await service.get_correct_behaviors(str(current_user.id))
     return StandardResponse(
         success=True,
         data=[TradeResponse.model_validate(t) for t in trades],
@@ -76,9 +77,10 @@ async def get_correct_behaviors(
     description="返回所有 environment_mismatch_flag=true 的交易记录",
 )
 async def get_environment_mismatches(
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trades = await service.get_environment_mismatches(DEFAULT_USER_ID)
+    trades = await service.get_environment_mismatches(str(current_user.id))
     return StandardResponse(
         success=True,
         data=[TradeResponse.model_validate(t) for t in trades],
@@ -96,9 +98,10 @@ async def get_environment_mismatches(
     description="返回各规则类别的统计数量",
 )
 async def get_rules_summary(
+    current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    summary = await service.get_rules_summary(DEFAULT_USER_ID)
+    summary = await service.get_rules_summary(str(current_user.id))
     return StandardResponse(
         success=True,
         data=RulesSummary(**summary),

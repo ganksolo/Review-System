@@ -78,8 +78,9 @@ pip install -r requirements.txt
 
 # 复制环境变量并根据本地环境修改
 cp .env.example .env
-# 编辑 .env，修改 DATABASE_URL 为本地数据库连接:
+# 编辑 .env，需要配置:
 # DATABASE_URL=postgresql+asyncpg://你的用户名@localhost:5432/trading_review_system
+# JWT_SECRET=你的随机密钥字符串（生产环境请使用强随机值）
 
 # 执行数据库迁移
 alembic upgrade head
@@ -176,7 +177,7 @@ npm run test:e2e
 2. **添加 PostgreSQL Plugin** — 自动生成 `DATABASE_URL`
 3. **创建 Backend 服务**
    - Root Directory: `backend/`
-   - 环境变量: `DATABASE_URL`, `ALLOWED_ORIGINS`, `LLM_API_KEY`, `LLM_MODEL`, `PORT`, `LOG_LEVEL`
+   - 环境变量: `DATABASE_URL`, `JWT_SECRET`（强随机字符串）, `ALLOWED_ORIGINS`, `LLM_API_KEY`, `LLM_MODEL`, `PORT`, `LOG_LEVEL`
 4. **创建 Frontend 服务**
    - Root Directory: `frontend/`
    - 环境变量: `NEXT_PUBLIC_API_URL` (设为 Backend 的公网 URL), `PORT`
@@ -186,7 +187,7 @@ npm run test:e2e
 
 参见 [.env.example](.env.example) 了解所有需要配置的环境变量。
 
-> ⚠️ **注意**: 敏感信息（`LLM_API_KEY` 等）只在 Railway Dashboard 中配置，不要提交到代码仓库。
+> ⚠️ **注意**: 敏感信息（`JWT_SECRET`, `LLM_API_KEY` 等）只在 Railway Dashboard 中配置，不要提交到代码仓库。
 
 ## 分支策略
 

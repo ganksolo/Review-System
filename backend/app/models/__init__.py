@@ -14,10 +14,12 @@ from app.models.enums import (
     ErrorLevel,
 )
 from app.models.trade import Trade
+from app.models.user import User
 
 __all__ = [
     "Base",
     "Trade",
+    "User",
     "LLMAnalysisStatus",
     "AccountType",
     "TradeCycle",

@@ -8,8 +8,11 @@ the application's SQLAlchemy Base metadata for autogeneration.
 import os
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+
+load_dotenv()
 
 # Alembic Config object
 config = context.config
@@ -21,6 +24,7 @@ if config.config_file_name is not None:
 # Import all models so their metadata is registered with Base
 from app.models.base import Base
 from app.models.trade import Trade  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 target_metadata = Base.metadata
 

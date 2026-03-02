@@ -2,6 +2,8 @@
  * API client — fetch wrapper for FastAPI backend.
  */
 
+import { getAccessToken } from "@/lib/auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -19,20 +21,37 @@ export async function apiClient<T>(
     path: string,
     options?: RequestInit
 ): Promise<T> {
+    const token = getAccessToken();
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(options?.headers as Record<string, string>),
+    };
+
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}${path}`, {
         ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options?.headers,
-        },
+        headers,
     });
+
+    if (res.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        window.location.href = "/login";
+        throw new ApiError(401, { detail: "认证已过期" });
+    }
 
     if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new ApiError(res.status, errorData);
     }
 
-    if (res.status === 204) return undefined as T;
+    if (res.status === 204) {
+        return undefined as T;
+    }
     return res.json();
 }
 

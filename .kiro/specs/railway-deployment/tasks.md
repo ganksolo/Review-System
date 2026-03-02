@@ -22,7 +22,7 @@
   - [ ] 3.2 添加 PostgreSQL Plugin
   - [ ] 3.3 创建 Backend Service, 设置 Root Directory = backend/
   - [ ] 3.4 创建 Frontend Service, 设置 Root Directory = frontend/
-  - [ ] 3.5 配置 Backend 环境变量
+  - [ ] 3.5 配置 Backend 环境变量（包含 JWT_SECRET）
   - [ ] 3.6 配置 Frontend 环境变量 (NEXT_PUBLIC_API_URL)
   - [ ] 3.7 配置自动部署触发 (main 分支)
 

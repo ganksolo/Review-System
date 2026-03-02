@@ -16,10 +16,12 @@ import {
     FilePlus,
     LayoutDashboard,
     List,
+    LogOut,
     Menu,
     X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const navItems = [
     { href: "/", label: "仪表板", icon: LayoutDashboard },
@@ -32,6 +34,7 @@ const navItems = [
 export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const { user, logout } = useAuth();
 
     // Close sidebar on route change (mobile)
     useEffect(() => {
@@ -139,14 +142,43 @@ export default function Sidebar() {
                         );
                     })}
                 </nav>
-
                 {/* Footer */}
+                {/* 版本信息区域：显示当前系统版本号，仅供用户和开发者参考 */}
                 <div
                     className="border-t px-5 py-3 text-xs text-[var(--color-text-muted)]"
                     style={{ borderColor: "var(--color-border)" }}
                 >
                     Trading Review v1.0
                 </div>
+                {/* User info + Logout */}
+                {user && (
+                    <div
+                        className="border-t px-4 py-3"
+                        style={{ borderColor: "var(--color-border)" }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">
+                                {user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">
+                                    {user.username}
+                                </p>
+                                <p className="truncate text-xs text-[var(--color-text-muted)]">
+                                    {user.email}
+                                </p>
+                            </div>
+                            <button
+                                onClick={logout}
+                                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--color-text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                                title="退出登录"
+                                aria-label="退出登录"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </aside>
         </>
     );

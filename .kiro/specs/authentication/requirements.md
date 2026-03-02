@@ -2,61 +2,88 @@
 
 ## Introduction
 
-本文档定义交易复盘系统的用户认证与鉴权需求。V1 阶段采用轻量级认证方案（简单 Token），预留未来接入 Auth0/Clerk 等第三方认证服务的扩展能力。
+本文档定义交易复盘系统的用户认证与鉴权需求。采用 JWT 双 Token 方案（access_token + refresh_token），支持邮箱注册登录，预留未来接入第三方认证服务的扩展能力。
 
 ## Glossary
 
 - **Auth_System**: 认证与鉴权系统
-- **User**: 系统用户，拥有唯一的 user_id
-- **Token**: 用于识别用户身份的令牌
-- **API_Key**: 简单的 API 密钥认证（V1 阶段）
-- **Auth_Provider**: 第三方认证服务提供商（Auth0/Clerk，V2 预留）
+- **User**: 系统用户，拥有唯一的 user_id、email
+- **access_token**: 短期 JWT（30 分钟），用于 API 认证
+- **refresh_token**: 长期 JWT（7 天），用于刷新 access_token
+- **bcrypt**: 密码哈希算法
 
 ## Requirements
 
-### Requirement 1: V1 轻量级用户识别
+### Requirement 1: 用户注册
 
-**User Story:** 作为个人交易者，我希望系统能识别我的身份，以便数据隔离和安全访问。
-
-#### Acceptance Criteria
-
-1. THE Auth_System SHALL 支持通过 HTTP Header `X-User-ID` 传递用户标识
-2. WHEN X-User-ID 未提供 THEN THE Auth_System SHALL 返回 401 状态码和未认证错误信息
-3. WHEN X-User-ID 为空字符串 THEN THE Auth_System SHALL 返回 401 状态码
-4. THE Auth_System SHALL 将 user_id 注入到所有 API 端点的参数中
-5. THE Auth_System SHALL 在数据库查询中使用 user_id 进行数据隔离
-
-### Requirement 2: 数据隔离
-
-**User Story:** 作为用户，我希望只能访问自己的数据，以便保护交易隐私。
+**User Story:** 作为新用户，我希望通过邮箱和密码注册账号，以便使用交易复盘系统。
 
 #### Acceptance Criteria
 
-1. WHEN 用户查询交易记录 THEN THE Auth_System SHALL 只返回该 user_id 对应的记录
-2. WHEN 用户更新或删除交易记录 THEN THE Auth_System SHALL 验证该记录属于当前用户
-3. WHEN 用户尝试访问其他用户的记录 THEN THE Auth_System SHALL 返回 404 状态码（不泄露记录存在性）
-4. THE Auth_System SHALL 在 Trade 模型的复合索引 (user_id, deleted_at) 上优化查询性能
+1. THE Auth_System SHALL 提供 `POST /api/auth/register` 端点
+2. THE Auth_System SHALL 要求 email（唯一）、username、password 三个必填字段
+3. WHEN email 已被注册 THEN THE Auth_System SHALL 返回 409 状态码
+4. THE Auth_System SHALL 使用 bcrypt 对密码进行哈希后存储
+5. THE Auth_System SHALL 在注册成功后返回 access_token 和 refresh_token
+6. THE Auth_System SHALL 验证 password 长度至少 8 位
+7. THE Auth_System SHALL 验证 email 格式正确
 
-### Requirement 3: V2 扩展预留
+### Requirement 2: 用户登录
 
-**User Story:** 作为系统架构师，我希望认证模块易于扩展，以便未来接入第三方认证服务。
-
-#### Acceptance Criteria
-
-1. THE Auth_System SHALL 将认证逻辑封装为 FastAPI 依赖注入函数 `get_current_user()`
-2. THE Auth_System SHALL 定义标准的 User Schema（id, email, name）用于依赖注入返回值
-3. WHEN 未来切换到 Auth0/Clerk THEN THE Auth_System SHALL 只需修改 `get_current_user()` 实现而不影响业务代码
-4. THE Auth_System SHALL 支持通过环境变量 AUTH_MODE 切换认证模式（simple / auth0 / clerk）
-5. THE Auth_System SHALL 在 simple 模式下使用 X-User-ID Header，在 auth0/clerk 模式下使用 Bearer Token
-
-### Requirement 4: 安全实践
-
-**User Story:** 作为系统管理员，我希望认证模块遵循安全最佳实践，以便防止常见攻击。
+**User Story:** 作为已注册用户，我希望通过邮箱和密码登录，以便访问我的交易数据。
 
 #### Acceptance Criteria
 
-1. THE Auth_System SHALL 不在日志中记录认证令牌或密钥
+1. THE Auth_System SHALL 提供 `POST /api/auth/login` 端点
+2. WHEN 邮箱不存在或密码错误 THEN THE Auth_System SHALL 返回 401 状态码和通用错误消息（不区分邮箱不存在和密码错误）
+3. WHEN 用户账号被禁用 (is_active=false) THEN THE Auth_System SHALL 返回 403 状态码
+4. THE Auth_System SHALL 在登录成功后返回 access_token 和 refresh_token
+
+### Requirement 3: Token 管理
+
+**User Story:** 作为已登录用户，我希望 token 能自动刷新，避免频繁重新登录。
+
+#### Acceptance Criteria
+
+1. THE Auth_System SHALL 签发 access_token（有效期 30 分钟）和 refresh_token（有效期 7 天）
+2. THE Auth_System SHALL 提供 `POST /api/auth/refresh` 端点，用 refresh_token 换取新的 access_token
+3. WHEN access_token 过期 THEN 前端 SHALL 自动使用 refresh_token 刷新
+4. WHEN refresh_token 过期 THEN THE Auth_System SHALL 要求用户重新登录
+5. THE Auth_System SHALL 使用 HS256 算法签名 JWT
+
+### Requirement 4: API 认证
+
+**User Story:** 作为系统，我需要验证每个 API 请求的用户身份，以便实现数据隔离。
+
+#### Acceptance Criteria
+
+1. THE Auth_System SHALL 通过 `Authorization: Bearer <access_token>` Header 验证请求
+2. WHEN token 未提供或无效 THEN THE Auth_System SHALL 返回 401 状态码
+3. THE Auth_System SHALL 将认证逻辑封装为 FastAPI 依赖注入函数 `get_current_user()`
+4. THE Auth_System SHALL 在所有业务 API 中使用 `get_current_user()` 替换硬编码的 DEFAULT_USER_ID
+5. THE Auth_System SHALL 确保用户只能访问自己的交易数据（数据隔离）
+
+### Requirement 5: 安全实践
+
+**User Story:** 作为系统管理员，我希望认证模块遵循安全最佳实践。
+
+#### Acceptance Criteria
+
+1. THE Auth_System SHALL 不在日志中记录密码或 token
 2. THE Auth_System SHALL 不在错误响应中泄露认证实现细节
-3. THE Auth_System SHALL 支持 HTTPS（由 Railway 自动处理 TLS）
-4. THE Auth_System SHALL 在 CORS 配置中限制允许的源
-5. THE Auth_System SHALL 在环境变量中存储所有认证相关的密钥和配置
+3. THE Auth_System SHALL 在 CORS 配置中限制允许的源
+4. THE Auth_System SHALL 在环境变量中存储 JWT_SECRET
+5. THE Auth_System SHALL 使用 bcrypt 的足够 rounds（默认 12）进行密码哈希
+
+### Requirement 6: 前端认证 UI
+
+**User Story:** 作为用户，我希望有美观的登录和注册页面。
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL 提供 `/login` 登录页面（邮箱 + 密码）
+2. THE Frontend SHALL 提供 `/register` 注册页面（用户名 + 邮箱 + 密码 + 确认密码）
+3. THE Frontend SHALL 在未登录时将所有页面重定向到 `/login`
+4. THE Frontend SHALL 遵循 OLED 深色设计系统
+5. THE Frontend SHALL 在表单中提供即时验证和错误提示
+6. THE Frontend SHALL 在登录/注册成功后跳转到首页

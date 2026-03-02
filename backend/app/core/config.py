@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 60
     LLM_MAX_TOKENS: int = 4096
 
+    # JWT Authentication
+    JWT_SECRET: str = "change-me-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_EXPIRE_DAYS: int = 7
+
     # Application
     API_VERSION: str = "1.0.0"
     APP_NAME: str = "Trading Review System"

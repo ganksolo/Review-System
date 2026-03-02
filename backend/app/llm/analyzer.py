@@ -27,6 +27,7 @@ class TradeAnalyzer:
 
     async def analyze_trade(
         self, db: AsyncSession, trade_id: UUID, *, force: bool = False,
+        user_id: Optional[str] = None,
     ) -> Optional[LLMAnalysisResult]:
         """
         分析单条交易记录。
@@ -39,8 +40,9 @@ class TradeAnalyzer:
         5. 更新交易记录字段
         6. 设置 llm_analysis_status = Completed / Failed
         """
-        # 1. 查找记录
         stmt = select(Trade).where(Trade.id == trade_id, Trade.deleted_at.is_(None))
+        if user_id:
+            stmt = stmt.where(Trade.user_id == user_id)
         result = await db.execute(stmt)
         trade = result.scalar_one_or_none()
 
@@ -122,6 +124,7 @@ class TradeAnalyzer:
         db: AsyncSession,
         trade_ids: List[UUID],
         max_concurrent: int = 3,
+        user_id: Optional[str] = None,
     ) -> List[Tuple[UUID, Optional[LLMAnalysisResult]]]:
         """
         批量分析多条交易记录（并行 + 信号量限流）。
@@ -138,7 +141,7 @@ class TradeAnalyzer:
 
         async def _analyze_one(tid: UUID) -> Tuple[UUID, Optional[LLMAnalysisResult]]:
             async with semaphore:
-                r = await self.analyze_trade(db, tid)
+                r = await self.analyze_trade(db, tid, user_id=user_id)
                 return (tid, r)
 
         tasks = [_analyze_one(tid) for tid in trade_ids]
