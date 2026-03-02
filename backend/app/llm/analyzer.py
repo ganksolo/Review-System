@@ -3,6 +3,7 @@ Core trade analysis engine — orchestrates LLM calls and updates trade records.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 from datetime import datetime, timezone
@@ -25,7 +26,7 @@ class TradeAnalyzer:
     """核心分析引擎：构建 prompt → 调用 LLM → 解析结果 → 更新 Trade。"""
 
     async def analyze_trade(
-        self, db: AsyncSession, trade_id: UUID
+        self, db: AsyncSession, trade_id: UUID, *, force: bool = False,
     ) -> Optional[LLMAnalysisResult]:
         """
         分析单条交易记录。
@@ -47,35 +48,29 @@ class TradeAnalyzer:
             logger.warning("Trade not found for analysis: %s", trade_id)
             return None
 
+        # ── Cache check: skip if already analyzed with identical trade data ──
+        trade_data = self._build_trade_data(trade)
+        current_hash = self._compute_trade_hash(trade_data)
+
+        if (
+            not force
+            and trade.llm_analysis_status is not None
+            and trade.llm_analysis_status.value == "Completed"
+            and trade.llm_raw_log
+            and trade.llm_raw_log.get("trade_data_hash") == current_hash
+        ):
+            logger.info(
+                "Skipping re-analysis for trade %s (cache hit, hash=%s)",
+                trade_id, current_hash[:12],
+            )
+            return None
+
         # 2. 标记为处理中
         trade.start_llm_analysis()
         await db.flush()
 
         try:
             # 3. 构建 prompt
-            trade_data = {
-                "stock_code": trade.stock_code,
-                "stock_name": trade.stock_name or "",
-                "account_type": trade.account_type.value if trade.account_type else "",
-                "trade_cycle": trade.trade_cycle.value if trade.trade_cycle else "",
-                "entry_price": trade.entry_price,
-                "exit_price": trade.exit_price,
-                "position_size": trade.position_size,
-                "pnl_amount": trade.pnl_amount,
-                "pnl_ratio": trade.pnl_ratio,
-                "market_environment": trade.market_environment.value if trade.market_environment else None,
-                "sector_status": trade.sector_status.value if trade.sector_status else None,
-                "selection_dimension": trade.selection_dimension or [],
-                "strategy_pattern": trade.strategy_pattern or [],
-                "thesis_statement": trade.thesis_statement,
-                "plan_adherence": trade.plan_adherence.value if trade.plan_adherence else None,
-                "stop_loss_discipline": trade.stop_loss_discipline.value if trade.stop_loss_discipline else None,
-                "exit_type": trade.exit_type.value if trade.exit_type else None,
-                "exit_reason": trade.exit_reason,
-                "psychological_state": trade.psychological_state.value if trade.psychological_state else None,
-                "correct_action": trade.correct_action,
-            }
-
             user_prompt = build_analysis_prompt(trade_data)
 
             # 4. 调用 LLM
@@ -103,6 +98,7 @@ class TradeAnalyzer:
                 "request": {"model": llm_response["model"], "trade_id": str(trade_id)},
                 "response": json.loads(content),
                 "usage": llm_response["usage"],
+                "trade_data_hash": current_hash,
                 "analyzed_at": datetime.now(timezone.utc).isoformat(),
             }
             trade.complete_llm_analysis(raw_log)
@@ -148,6 +144,37 @@ class TradeAnalyzer:
         tasks = [_analyze_one(tid) for tid in trade_ids]
         gathered = await asyncio.gather(*tasks)
         return list(gathered)
+
+    def _build_trade_data(self, trade: Trade) -> dict:
+        """Extract trade fields into a dict for prompt building and cache hashing."""
+        return {
+            "stock_code": trade.stock_code,
+            "stock_name": trade.stock_name or "",
+            "account_type": trade.account_type.value if trade.account_type else "",
+            "trade_cycle": trade.trade_cycle.value if trade.trade_cycle else "",
+            "entry_price": trade.entry_price,
+            "exit_price": trade.exit_price,
+            "position_size": trade.position_size,
+            "pnl_amount": trade.pnl_amount,
+            "pnl_ratio": trade.pnl_ratio,
+            "market_environment": trade.market_environment.value if trade.market_environment else None,
+            "sector_status": trade.sector_status.value if trade.sector_status else None,
+            "selection_dimension": trade.selection_dimension or [],
+            "strategy_pattern": trade.strategy_pattern or [],
+            "thesis_statement": trade.thesis_statement,
+            "plan_adherence": trade.plan_adherence.value if trade.plan_adherence else None,
+            "stop_loss_discipline": trade.stop_loss_discipline.value if trade.stop_loss_discipline else None,
+            "exit_type": trade.exit_type.value if trade.exit_type else None,
+            "exit_reason": trade.exit_reason,
+            "psychological_state": trade.psychological_state.value if trade.psychological_state else None,
+            "correct_action": trade.correct_action,
+        }
+
+    @staticmethod
+    def _compute_trade_hash(trade_data: dict) -> str:
+        """Compute SHA256 hash of trade data for cache comparison."""
+        serialized = json.dumps(trade_data, sort_keys=True, default=str)
+        return hashlib.sha256(serialized.encode()).hexdigest()
 
     def _apply_result(self, trade: Trade, result: LLMAnalysisResult) -> None:
         """将 LLM 分析结果应用到 Trade 模型字段。"""
