@@ -8,12 +8,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, XCircle, BarChart3 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle, BarChart3, Sparkles, Loader2 } from "lucide-react";
 import {
     useRulesSummary,
     useExclusions,
     useCorrectBehaviors,
     useEnvironmentMismatches,
+    useTrades,
+    useBatchAnalyze,
 } from "@/lib/hooks/useTrades";
 import { formatDate, pnlColor, formatPercent } from "@/lib/utils";
 import type { Trade } from "@/types/trade";
@@ -22,23 +24,86 @@ type Tab = "exclusions" | "correct" | "mismatches";
 
 export default function RulesPage() {
     const [tab, setTab] = useState<Tab>("correct");
+    const [analyzeResult, setAnalyzeResult] = useState<{ succeeded: number; failed: number } | null>(null);
 
     const { data: summaryData, isLoading: loadingSummary } = useRulesSummary();
     const { data: exclusionsData, isLoading: loadingExcl } = useExclusions();
     const { data: correctData, isLoading: loadingCorrect } = useCorrectBehaviors();
     const { data: mismatchData, isLoading: loadingMismatch } = useEnvironmentMismatches();
 
+    const { data: tradesData } = useTrades({ page_size: "200" });
+    const batchAnalyze = useBatchAnalyze();
+
     const summary = summaryData?.data;
+    const allTrades = tradesData?.data ?? [];
+    const unanalyzedTrades = allTrades.filter(
+        (t) => !t.llm_analysis_status || t.llm_analysis_status === "Pending" || t.llm_analysis_status === "Failed"
+    );
+
+    const handleBatchAnalyze = async () => {
+        if (unanalyzedTrades.length === 0) {
+            return;
+        }
+        setAnalyzeResult(null);
+        const ids = unanalyzedTrades.map((t) => t.id);
+        try {
+            const res = await batchAnalyze.mutateAsync({ tradeIds: ids });
+            setAnalyzeResult({
+                succeeded: res.data?.succeeded ?? 0,
+                failed: res.data?.failed ?? 0,
+            });
+        } catch {
+            setAnalyzeResult({ succeeded: 0, failed: ids.length });
+        }
+    };
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">动态规则库</h1>
-                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    从交易数据自动提炼的规则 — 排除、正确行为、环境错配
-                </p>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">动态规则库</h1>
+                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                        从交易数据自动提炼的规则 — 排除、正确行为、环境错配
+                    </p>
+                </div>
+
+                <button
+                    onClick={handleBatchAnalyze}
+                    disabled={batchAnalyze.isPending || unanalyzedTrades.length === 0}
+                    className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                        background: "linear-gradient(135deg, var(--color-cta), #D97706)",
+                        color: "#000",
+                    }}
+                    title={unanalyzedTrades.length === 0 ? "所有交易已分析" : `${unanalyzedTrades.length} 条待分析`}
+                >
+                    {batchAnalyze.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="h-4 w-4" />
+                    )}
+                    {batchAnalyze.isPending
+                        ? "分析中..."
+                        : `AI 分析${unanalyzedTrades.length > 0 ? ` (${unanalyzedTrades.length})` : ""}`}
+                </button>
             </div>
+
+            {/* Analyze result banner */}
+            {analyzeResult && (
+                <div
+                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+                    style={{
+                        borderColor: analyzeResult.failed > 0 ? "rgba(239,83,80,0.3)" : "rgba(38,166,154,0.3)",
+                        backgroundColor: analyzeResult.failed > 0 ? "rgba(239,83,80,0.05)" : "rgba(38,166,154,0.05)",
+                        color: analyzeResult.failed > 0 ? "var(--color-bearish)" : "var(--color-bullish)",
+                    }}
+                >
+                    <Sparkles className="h-4 w-4" />
+                    AI 分析完成: {analyzeResult.succeeded} 条成功
+                    {analyzeResult.failed > 0 && `，${analyzeResult.failed} 条失败`}
+                </div>
+            )}
 
             {/* Summary Stats */}
             {loadingSummary ? (

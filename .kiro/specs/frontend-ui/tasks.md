@@ -58,3 +58,10 @@
 - [x] 9. 测试
   - [x] 9.1 组件单元测试 (Vitest + React Testing Library)
   - [x] 9.2 E2E 测试 (Playwright — 表单提交流程)
+
+- [x] 10. LLM 分析前端交互
+  - [x] 10.1 api.ts 新增 llmApi 封装 (analyze, batchAnalyze, health, cost)
+  - [x] 10.2 hooks 新增 LLM 相关 TanStack Query hooks
+  - [x] 10.3 规则库页面: 「AI 批量分析」按钮 + 进度展示
+  - [x] 10.4 数据分析页面: LLM 洞察区域 + 分析触发入口
+  - [x] 10.5 交易详情页: 展示完整 LLM 分析结果

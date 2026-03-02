@@ -50,3 +50,11 @@
   - [x] 7.3 结构化解析测试
   - [x] 7.4 分析流程集成测试 (with mock)
   - _Requirements: 16.1-16.4_
+
+- [x] 8. 前端 LLM 交互集成
+  - [x] 8.1 前端 api.ts 封装 LLM API (analyze, batchAnalyze, health, cost)
+  - [x] 8.2 前端 hooks 封装 (useAnalyzeTrade, useBatchAnalyze, useLLMHealth)
+  - [x] 8.3 规则库页面: 新增「AI 批量分析」按钮，触发未分析交易的批量 LLM 分析
+  - [x] 8.4 数据分析页面: 新增 LLM 洞察区域，展示分析状态统计和触发入口
+  - [x] 8.5 交易详情页: 展示完整 LLM 分析结果 (thesis_analysis, cognitive_biases, confidence_score 等)
+  - _Requirements: 7.1-7.5, 8.1-8.5_

@@ -5,7 +5,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { tradeApi, rulesApi } from "@/lib/api";
+import { tradeApi, rulesApi, llmApi } from "@/lib/api";
 import type { TradeCreateData, TradeUpdateData } from "@/types/trade";
 
 // ── Query Keys ────────────────────────────────────────────────
@@ -116,5 +116,52 @@ export function useEnvironmentMismatches() {
     return useQuery({
         queryKey: ruleKeys.mismatches(),
         queryFn: () => rulesApi.environmentMismatches(),
+    });
+}
+
+// ── LLM Hooks ────────────────────────────────────────────────
+
+export const llmKeys = {
+    all: ["llm"] as const,
+    health: () => [...llmKeys.all, "health"] as const,
+    cost: () => [...llmKeys.all, "cost"] as const,
+};
+
+export function useAnalyzeTrade() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (tradeId: string) => llmApi.analyzeTrade(tradeId),
+        onSuccess: (_, tradeId) => {
+            qc.invalidateQueries({ queryKey: tradeKeys.detail(tradeId) });
+            qc.invalidateQueries({ queryKey: ruleKeys.all });
+        },
+    });
+}
+
+export function useBatchAnalyze() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ tradeIds, maxConcurrent }: { tradeIds: string[]; maxConcurrent?: number }) =>
+            llmApi.batchAnalyze(tradeIds, maxConcurrent),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: tradeKeys.all });
+            qc.invalidateQueries({ queryKey: ruleKeys.all });
+        },
+    });
+}
+
+export function useLLMHealth() {
+    return useQuery({
+        queryKey: llmKeys.health(),
+        queryFn: () => llmApi.health(),
+        staleTime: 60_000,
+    });
+}
+
+export function useLLMCost() {
+    return useQuery({
+        queryKey: llmKeys.cost(),
+        queryFn: () => llmApi.cost(),
+        staleTime: 30_000,
     });
 }

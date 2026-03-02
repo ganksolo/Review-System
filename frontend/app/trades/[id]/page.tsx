@@ -9,8 +9,8 @@
 import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, TrendingUp, TrendingDown, Brain, Target, AlertTriangle, Clock, Pencil, Trash2 } from "lucide-react";
-import { useTrade, useDeleteTrade } from "@/lib/hooks/useTrades";
+import { ArrowLeft, Calendar, TrendingUp, TrendingDown, Brain, Target, AlertTriangle, Clock, Pencil, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { useTrade, useDeleteTrade, useAnalyzeTrade } from "@/lib/hooks/useTrades";
 import { formatDateTime, formatPnL, formatPercent, pnlColor } from "@/lib/utils";
 
 export default function TradeDetailPage({
@@ -22,6 +22,7 @@ export default function TradeDetailPage({
     const router = useRouter();
     const { data, isLoading, error } = useTrade(id);
     const deleteMutation = useDeleteTrade();
+    const analyzeMutation = useAnalyzeTrade();
     const trade = data?.data;
 
     const handleDelete = () => {
@@ -233,6 +234,13 @@ export default function TradeDetailPage({
                 )}
             </Section>
 
+            {/* LLM Analysis Insights */}
+            <LLMInsightsSection
+                trade={trade}
+                onAnalyze={() => analyzeMutation.mutate(id)}
+                isAnalyzing={analyzeMutation.isPending}
+            />
+
             {/* System Info */}
             <div className="flex items-center justify-between font-mono text-xs text-[var(--color-text-muted)]">
                 <span>创建: {formatDateTime(trade.created_at)}</span>
@@ -299,6 +307,171 @@ function MetricCard({
                 {icon && <span style={{ color }}>{icon}</span>}
             </div>
             <p className="mt-1 font-mono text-xl font-bold" style={{ color }}>{value}</p>
+        </div>
+    );
+}
+
+interface LLMRawLog {
+    analysis_result?: {
+        thesis_analysis?: string;
+        cognitive_biases?: string[];
+        confidence_score?: number;
+        reasoning?: string;
+        action_items?: string[];
+        long_term_insights?: string[];
+    };
+}
+
+function LLMInsightsSection({
+    trade,
+    onAnalyze,
+    isAnalyzing,
+}: {
+    trade: { llm_analysis_status: string; llm_raw_log: Record<string, unknown> | null; llm_action_item: string | null };
+    onAnalyze: () => void;
+    isAnalyzing: boolean;
+}) {
+    const raw = trade.llm_raw_log as LLMRawLog | null;
+    const result = raw?.analysis_result;
+    const isCompleted = trade.llm_analysis_status === "Completed";
+    const canAnalyze = !isCompleted || trade.llm_analysis_status === "Failed";
+
+    if (!isCompleted && !canAnalyze) {
+        return null;
+    }
+
+    return (
+        <div
+            className="card-glow rounded-xl border p-5"
+            style={{
+                backgroundColor: "var(--color-bg-card)",
+                borderColor: "rgba(245,158,11,0.3)",
+            }}
+        >
+            <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--color-text-primary)]">
+                    <Sparkles className="h-4 w-4 text-[var(--color-cta)]" /> AI 分析洞察
+                </h2>
+                {canAnalyze && (
+                    <button
+                        onClick={onAnalyze}
+                        disabled={isAnalyzing}
+                        className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{
+                            background: "linear-gradient(135deg, var(--color-cta), #D97706)",
+                            color: "#000",
+                        }}
+                    >
+                        {isAnalyzing ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        {isAnalyzing ? "分析中..." : isCompleted ? "重新分析" : "AI 分析"}
+                    </button>
+                )}
+            </div>
+
+            {!isCompleted ? (
+                <p className="text-sm text-[var(--color-text-muted)]">
+                    尚未进行 AI 分析，点击右上角按钮触发分析。
+                </p>
+            ) : result ? (
+                <div className="space-y-3">
+                    {result.thesis_analysis && (
+                        <InsightBlock label="论点评估" color="primary">
+                            {result.thesis_analysis}
+                        </InsightBlock>
+                    )}
+
+                    {result.cognitive_biases && result.cognitive_biases.length > 0 && (
+                        <InsightBlock label="认知偏差" color="bearish">
+                            <div className="flex flex-wrap gap-1.5">
+                                {result.cognitive_biases.map((b, i) => (
+                                    <span
+                                        key={i}
+                                        className="rounded-full border px-2.5 py-0.5 text-xs"
+                                        style={{
+                                            borderColor: "rgba(239,83,80,0.3)",
+                                            color: "var(--color-bearish)",
+                                            backgroundColor: "rgba(239,83,80,0.05)",
+                                        }}
+                                    >
+                                        {b}
+                                    </span>
+                                ))}
+                            </div>
+                        </InsightBlock>
+                    )}
+
+                    {result.action_items && result.action_items.length > 0 && (
+                        <InsightBlock label="行动建议" color="cta">
+                            <ul className="list-inside list-disc space-y-1">
+                                {result.action_items.map((a, i) => (
+                                    <li key={i}>{a}</li>
+                                ))}
+                            </ul>
+                        </InsightBlock>
+                    )}
+
+                    {result.long_term_insights && result.long_term_insights.length > 0 && (
+                        <InsightBlock label="长期优化" color="bullish">
+                            <ul className="list-inside list-disc space-y-1">
+                                {result.long_term_insights.map((l, i) => (
+                                    <li key={i}>{l}</li>
+                                ))}
+                            </ul>
+                        </InsightBlock>
+                    )}
+
+                    {result.reasoning && (
+                        <InsightBlock label="推理过程" color="muted">
+                            {result.reasoning}
+                        </InsightBlock>
+                    )}
+
+                    {result.confidence_score !== undefined && (
+                        <div className="flex items-center gap-2 pt-1 text-xs text-[var(--color-text-muted)]">
+                            <span>置信度:</span>
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--color-bg-surface)]">
+                                <div
+                                    className="h-full rounded-full bg-[var(--color-cta)]"
+                                    style={{ width: `${result.confidence_score * 100}%` }}
+                                />
+                            </div>
+                            <span className="font-mono">{(result.confidence_score * 100).toFixed(0)}%</span>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <p className="text-sm text-[var(--color-text-muted)]">
+                    分析已完成，但详细结果数据不可用。
+                </p>
+            )}
+        </div>
+    );
+}
+
+function InsightBlock({
+    label,
+    color,
+    children,
+}: {
+    label: string;
+    color: "primary" | "bearish" | "cta" | "bullish" | "muted";
+    children: React.ReactNode;
+}) {
+    const colorMap: Record<typeof color, string> = {
+        primary: "var(--color-primary-light)",
+        bearish: "var(--color-bearish)",
+        cta: "var(--color-cta)",
+        bullish: "var(--color-bullish)",
+        muted: "var(--color-text-muted)",
+    };
+    return (
+        <div>
+            <p className="mb-1 text-xs font-semibold" style={{ color: colorMap[color] }}>{label}</p>
+            <div className="text-sm text-[var(--color-text-secondary)]">{children}</div>
         </div>
     );
 }

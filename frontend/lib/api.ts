@@ -98,6 +98,40 @@ export const tradeApi = {
         }),
 };
 
+// ── LLM API ──────────────────────────────────────────────────
+
+export const llmApi = {
+    analyzeTrade: (tradeId: string) =>
+        apiClient<StandardResponse<unknown>>(`/api/trades/${tradeId}/analyze`, {
+            method: "POST",
+        }),
+
+    batchAnalyze: (tradeIds: string[], maxConcurrent = 3) =>
+        apiClient<StandardResponse<{
+            total: number;
+            succeeded: number;
+            failed: number;
+            results: [string, unknown][];
+            failed_ids: string[];
+        }>>("/api/trades/batch-analyze", {
+            method: "POST",
+            body: JSON.stringify({ trade_ids: tradeIds, max_concurrent: maxConcurrent }),
+        }),
+
+    health: () =>
+        apiClient<StandardResponse<{ status: string }>>("/api/llm/health"),
+
+    cost: () =>
+        apiClient<StandardResponse<{
+            total_calls: number;
+            total_prompt_tokens: number;
+            total_completion_tokens: number;
+            total_cost_usd: number;
+        }>>("/api/llm/cost"),
+};
+
+// ── Rules API ─────────────────────────────────────────────────
+
 export const rulesApi = {
     exclusions: () =>
         apiClient<StandardResponse<Trade[]>>("/api/rules/exclusions"),

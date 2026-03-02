@@ -7,7 +7,9 @@
 
 "use client";
 
-import { useTrades, useRulesSummary } from "@/lib/hooks/useTrades";
+import { useState } from "react";
+import { Sparkles, Loader2, Brain, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useTrades, useRulesSummary, useBatchAnalyze, useLLMCost } from "@/lib/hooks/useTrades";
 import {
     BarChart,
     Bar,
@@ -87,6 +89,28 @@ export default function AnalyticsPage() {
         : [];
 
     const isEmpty = trades.length === 0;
+
+    const batchAnalyze = useBatchAnalyze();
+    const { data: costData } = useLLMCost();
+    const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+
+    const analyzedCount = trades.filter((t) => t.llm_analysis_status === "Completed").length;
+    const unanalyzedTrades = trades.filter(
+        (t) => !t.llm_analysis_status || t.llm_analysis_status === "Pending" || t.llm_analysis_status === "Failed"
+    );
+
+    const handleBatchAnalyze = async () => {
+        if (unanalyzedTrades.length === 0) {
+            return;
+        }
+        setAnalyzeMsg(null);
+        try {
+            const res = await batchAnalyze.mutateAsync({ tradeIds: unanalyzedTrades.map((t) => t.id) });
+            setAnalyzeMsg(`分析完成: ${res.data?.succeeded ?? 0} 条成功${(res.data?.failed ?? 0) > 0 ? `，${res.data?.failed} 条失败` : ""}`);
+        } catch {
+            setAnalyzeMsg("批量分析失败，请稍后重试");
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -185,6 +209,70 @@ export default function AnalyticsPage() {
                             </BarChart>
                         </ResponsiveContainer>
                     </ChartCard>
+
+                    {/* LLM Insights Panel */}
+                    <div
+                        className="card-glow rounded-xl border p-5 lg:col-span-2"
+                        style={{ borderColor: "rgba(245,158,11,0.3)", backgroundColor: "var(--color-bg-card)" }}
+                    >
+                        <div className="mb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Brain className="h-5 w-5 text-[var(--color-cta)]" />
+                                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">AI 分析洞察</h3>
+                            </div>
+                            <button
+                                onClick={handleBatchAnalyze}
+                                disabled={batchAnalyze.isPending || unanalyzedTrades.length === 0}
+                                className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                                style={{
+                                    background: "linear-gradient(135deg, var(--color-cta), #D97706)",
+                                    color: "#000",
+                                }}
+                            >
+                                {batchAnalyze.isPending ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                )}
+                                {batchAnalyze.isPending
+                                    ? "分析中..."
+                                    : unanalyzedTrades.length > 0
+                                        ? `分析 ${unanalyzedTrades.length} 条`
+                                        : "全部已分析"}
+                            </button>
+                        </div>
+
+                        {analyzeMsg && (
+                            <div className="mb-4 rounded-lg border border-[rgba(38,166,154,0.3)] bg-[rgba(38,166,154,0.05)] px-3 py-2 text-xs text-[var(--color-bullish)]">
+                                {analyzeMsg}
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
+                                <p className="text-xs text-[var(--color-text-muted)]">已分析</p>
+                                <p className="mt-1 font-mono text-lg font-bold text-[var(--color-bullish)]">
+                                    {analyzedCount}<span className="text-xs text-[var(--color-text-muted)]">/{trades.length}</span>
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
+                                <p className="text-xs text-[var(--color-text-muted)]">待分析</p>
+                                <p className="mt-1 font-mono text-lg font-bold text-[var(--color-cta)]">{unanalyzedTrades.length}</p>
+                            </div>
+                            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
+                                <p className="text-xs text-[var(--color-text-muted)]">API 调用</p>
+                                <p className="mt-1 font-mono text-lg font-bold text-[var(--color-text-primary)]">
+                                    {costData?.data?.total_calls ?? 0}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-3">
+                                <p className="text-xs text-[var(--color-text-muted)]">Token 用量</p>
+                                <p className="mt-1 font-mono text-lg font-bold text-[var(--color-text-primary)]">
+                                    {((costData?.data?.total_prompt_tokens ?? 0) + (costData?.data?.total_completion_tokens ?? 0)).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
