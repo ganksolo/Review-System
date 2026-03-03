@@ -11,6 +11,7 @@ psycopg2-binary==2.9.10
 # Configuration
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
+python-multipart>=0.0.18
 
 # Authentication
 passlib[bcrypt]==1.7.4

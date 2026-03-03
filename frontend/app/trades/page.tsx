@@ -6,10 +6,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { FilePlus, Search, TrendingDown, TrendingUp, Trash2, Download, Pencil } from "lucide-react";
+import { FilePlus, Search, TrendingDown, TrendingUp, Trash2, Download, Upload, Pencil, Loader2 } from "lucide-react";
 import { useTrades, useDeleteTrade } from "@/lib/hooks/useTrades";
+import { getAccessToken } from "@/lib/auth";
 import { formatDate, pnlColor, formatPercent } from "@/lib/utils";
 import {
     ACCOUNT_TYPES,
@@ -18,20 +19,58 @@ import {
     TRADE_CYCLES,
 } from "@/types/trade";
 
+function csvCell(value: unknown): string {
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
+    const s = String(value);
+    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+}
+
 function exportCSV(trades: any[]) {
-    const headers = ["日期", "代码", "名称", "周期", "买入价", "卖出价", "仓位%", "盈亏金额", "盈亏比%", "结果类型", "正确行为"];
+    const headers = [
+        "账户类型", "股票代码", "股票名称", "交易周期",
+        "买入时间", "卖出时间", "仓位%", "买入价", "卖出价",
+        "预设止损", "预设止盈", "滑点", "最大浮盈", "最大浮亏",
+        "市场环境", "板块地位", "选股维度", "策略模式",
+        "量能特征", "交易论点",
+        "计划执行度", "止损纪律", "离场类型", "离场原因", "心理状态",
+        "结果归因", "错误层级", "环境错配", "永久排除", "正确行为",
+    ];
     const rows = trades.map((t) => [
-        t.entry_date?.slice(0, 10) ?? "",
-        t.stock_code,
-        t.stock_name ?? "",
-        t.trade_cycle ?? "",
-        t.entry_price ?? "",
-        t.exit_price ?? "",
-        t.position_size ?? "",
-        t.pnl_amount ?? "",
-        t.pnl_ratio ?? "",
-        t.result_type ?? "",
-        (t.correct_action ?? "").replace(/,/g, "，"),
+        csvCell(t.account_type),
+        csvCell(t.stock_code),
+        csvCell(t.stock_name),
+        csvCell(t.trade_cycle),
+        csvCell(t.entry_date?.slice(0, 19)),
+        csvCell(t.exit_date?.slice(0, 19)),
+        csvCell(t.position_size),
+        csvCell(t.entry_price),
+        csvCell(t.exit_price),
+        csvCell(t.preset_stop_loss),
+        csvCell(t.preset_take_profit),
+        csvCell(t.slippage),
+        csvCell(t.max_favorable_excursion),
+        csvCell(t.max_adverse_excursion),
+        csvCell(t.market_environment),
+        csvCell(t.sector_status),
+        csvCell(t.selection_dimension?.join?.(";")),
+        csvCell(t.strategy_pattern?.join?.(";")),
+        csvCell(t.volume_profile),
+        csvCell(t.thesis_statement),
+        csvCell(t.plan_adherence),
+        csvCell(t.stop_loss_discipline),
+        csvCell(t.exit_type),
+        csvCell(t.exit_reason),
+        csvCell(t.psychological_state),
+        csvCell(t.result_type),
+        csvCell(t.error_level),
+        csvCell(t.environment_mismatch_flag === true ? "是" : t.environment_mismatch_flag === false ? "否" : ""),
+        csvCell(t.permanent_exclusion_flag === true ? "是" : t.permanent_exclusion_flag === false ? "否" : ""),
+        csvCell(t.correct_action),
     ]);
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const BOM = "\uFEFF";
@@ -44,11 +83,16 @@ function exportCSV(trades: any[]) {
     URL.revokeObjectURL(url);
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function TradesListPage() {
     const [page, setPage] = useState(1);
     const [filters, setFilters] = useState<Record<string, string>>({});
     const [sortBy, setSortBy] = useState("entry_date");
     const [order, setOrder] = useState("desc");
+    const [importing, setImporting] = useState(false);
+    const [importMsg, setImportMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const params: Record<string, string> = {
         page: String(page),
@@ -58,8 +102,44 @@ export default function TradesListPage() {
         ...filters,
     };
 
-    const { data, isLoading, error } = useTrades(params);
+    const { data, isLoading, error, refetch } = useTrades(params);
     const deleteMutation = useDeleteTrade();
+
+    const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            return;
+        }
+        setImporting(true);
+        setImportMsg(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const token = getAccessToken();
+            const res = await fetch(`${API_BASE}/api/trades/import`, {
+                method: "POST",
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData,
+            });
+            const json = await res.json();
+            if (json.success) {
+                setImportMsg({
+                    type: "success",
+                    text: `导入完成: ${json.data?.success_count ?? 0} 条成功${json.data?.failure_count ? `，${json.data.failure_count} 条失败` : ""}`,
+                });
+                refetch();
+            } else {
+                setImportMsg({ type: "error", text: json.message || "导入失败" });
+            }
+        } catch {
+            setImportMsg({ type: "error", text: "导入请求失败，请检查网络" });
+        } finally {
+            setImporting(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
 
     const trades = data?.data ?? [];
     const pagination = data?.pagination;
@@ -96,6 +176,25 @@ export default function TradesListPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        onChange={handleImportCSV}
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={importing}
+                        className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-40"
+                        style={{
+                            borderColor: "var(--color-border)",
+                            color: "var(--color-text-secondary)",
+                        }}
+                    >
+                        {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        导入 CSV
+                    </button>
                     <button
                         onClick={() => trades.length && exportCSV(trades)}
                         disabled={!trades.length}
@@ -121,6 +220,26 @@ export default function TradesListPage() {
                     </Link>
                 </div>
             </div>
+
+            {/* Import result message */}
+            {importMsg && (
+                <div
+                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+                    style={{
+                        borderColor: importMsg.type === "success" ? "rgba(38,166,154,0.3)" : "rgba(239,83,80,0.3)",
+                        backgroundColor: importMsg.type === "success" ? "rgba(38,166,154,0.05)" : "rgba(239,83,80,0.05)",
+                        color: importMsg.type === "success" ? "var(--color-bullish)" : "var(--color-bearish)",
+                    }}
+                >
+                    {importMsg.text}
+                    <button
+                        onClick={() => setImportMsg(null)}
+                        className="ml-auto cursor-pointer text-xs opacity-60 hover:opacity-100"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* Filters */}
             <div

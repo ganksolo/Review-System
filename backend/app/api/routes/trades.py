@@ -4,6 +4,7 @@ Trades API router — CRUD operations for trade records.
 Endpoints:
   POST   /api/trades              创建单条交易记录
   POST   /api/trades/bulk         批量创建
+  POST   /api/trades/import       CSV 文件导入
   GET    /api/trades              查询列表（过滤+分页+排序）
   GET    /api/trades/{id}         获取单条记录
   PUT    /api/trades/{id}         乐观锁更新
@@ -11,11 +12,14 @@ Endpoints:
   POST   /api/trades/{id}/restore 恢复已删除记录
 """
 
+import csv
+import io
+import logging
 import math
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,6 +95,123 @@ async def bulk_create_trades(
         success=True,
         data=result,
         message=f"批量创建完成: {len(successes)} 成功, {len(failures)} 失败",
+    )
+
+
+# ── POST /api/trades/import ───────────────────────────────────
+
+_logger = logging.getLogger(__name__)
+
+CSV_HEADER_MAP = {
+    "账户类型": "account_type",
+    "股票代码": "stock_code",
+    "股票名称": "stock_name",
+    "交易周期": "trade_cycle",
+    "买入时间": "entry_date",
+    "卖出时间": "exit_date",
+    "仓位%": "position_size",
+    "买入价": "entry_price",
+    "卖出价": "exit_price",
+    "预设止损": "preset_stop_loss",
+    "预设止盈": "preset_take_profit",
+    "滑点": "slippage",
+    "最大浮盈": "max_favorable_excursion",
+    "最大浮亏": "max_adverse_excursion",
+    "市场环境": "market_environment",
+    "板块地位": "sector_status",
+    "选股维度": "selection_dimension",
+    "策略模式": "strategy_pattern",
+    "量能特征": "volume_profile",
+    "交易论点": "thesis_statement",
+    "计划执行度": "plan_adherence",
+    "止损纪律": "stop_loss_discipline",
+    "离场类型": "exit_type",
+    "离场原因": "exit_reason",
+    "心理状态": "psychological_state",
+    "结果归因": "result_type",
+    "错误层级": "error_level",
+    "环境错配": "environment_mismatch_flag",
+    "永久排除": "permanent_exclusion_flag",
+    "正确行为": "correct_action",
+}
+
+FLOAT_FIELDS = {
+    "position_size", "entry_price", "exit_price",
+    "preset_stop_loss", "preset_take_profit", "slippage",
+    "max_favorable_excursion", "max_adverse_excursion",
+}
+ARRAY_FIELDS = {"selection_dimension", "strategy_pattern"}
+BOOL_FIELDS = {"environment_mismatch_flag", "permanent_exclusion_flag"}
+
+
+def _parse_csv_row(row: dict) -> dict:
+    """Map Chinese CSV headers to TradeCreate field names and coerce types."""
+    data = {}
+    for cn_header, field in CSV_HEADER_MAP.items():
+        val = row.get(cn_header, "").strip()
+        if not val:
+            continue
+
+        if field in FLOAT_FIELDS:
+            data[field] = float(val)
+        elif field in ARRAY_FIELDS:
+            data[field] = [s.strip() for s in val.split(";") if s.strip()]
+        elif field in BOOL_FIELDS:
+            data[field] = val in ("是", "true", "True", "1")
+        else:
+            data[field] = val
+
+    return data
+
+
+@router.post(
+    "/trades/import",
+    response_model=StandardResponse,
+    summary="CSV 文件导入交易记录",
+)
+async def import_trades_csv(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    service: TradeService = Depends(get_service),
+):
+    if not file.filename or not file.filename.endswith(".csv"):
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": "请上传 .csv 文件"},
+        )
+
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("gbk", errors="replace")
+
+    reader = csv.DictReader(io.StringIO(text))
+    success_count = 0
+    failures = []
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            parsed = _parse_csv_row(row)
+            if not parsed.get("stock_code") or not parsed.get("correct_action"):
+                failures.append({"row": i, "error": "缺少必填字段: 股票代码 或 正确行为"})
+                continue
+
+            trade_data = TradeCreate(**parsed)
+            await service.create_trade(str(current_user.id), trade_data)
+            success_count += 1
+        except Exception as e:
+            _logger.warning("CSV import row %d failed: %s", i, e)
+            failures.append({"row": i, "error": str(e)})
+
+    return StandardResponse(
+        success=True,
+        data={
+            "success_count": success_count,
+            "failure_count": len(failures),
+            "failures": failures[:50],
+        },
+        message=f"导入完成: {success_count} 条成功, {len(failures)} 条失败",
     )
 
 
