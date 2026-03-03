@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
 
 /* ── Design System: Trading Review System ────────────────────
    Source: ui-ux-pro-max skill
@@ -163,6 +164,86 @@ button {
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
 
+/* ── react-day-picker dark theme ──────────────────────────── */
+.rdp-root {
+  --rdp-accent-color: var(--color-primary-light);
+  --rdp-accent-background-color: var(--color-primary);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-day_button-border: 2px solid transparent;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-selected-font: bold 0.875rem var(--font-body);
+}
+
+/* Counter Tailwind reset — keep table layout intact for rdp */
+.rdp-root table {
+  display: table !important;
+  table-layout: fixed;
+  border-collapse: collapse;
+  white-space: normal;
+  overflow: visible;
+}
+
+.rdp-root th,
+.rdp-root td {
+  text-align: center;
+  padding: 0;
+}
+
+.rdp-root .rdp-month_caption {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.rdp-root .rdp-weekday {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.rdp-root .rdp-day {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.rdp-root .rdp-day:hover:not(.rdp-selected):not(.rdp-disabled) {
+  background: var(--color-primary-glow);
+  color: var(--color-text-primary);
+}
+
+.rdp-root .rdp-selected .rdp-day_button {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.rdp-root .rdp-today:not(.rdp-selected) .rdp-day_button {
+  border: 1px solid var(--color-primary-light);
+}
+
+.rdp-root .rdp-outside {
+  opacity: 0.3;
+}
+
+.rdp-root .rdp-button_previous,
+.rdp-root .rdp-button_next {
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+}
+
+.rdp-root .rdp-button_previous:hover,
+.rdp-root .rdp-button_next:hover {
+  background: var(--color-primary-glow);
+  color: var(--color-text-primary);
+}
+
+.rdp-root .rdp-disabled {
+  opacity: 0.25;
+}
+
 /* ── Responsive: Mobile / Tablet ─────────────────────────── */
 @media (max-width: 768px) {
 
@@ -186,8 +267,8 @@ button {
     font-size: 1.5rem !important;
   }
 
-  /* Table horizontal scroll on mobile */
-  table {
+  /* Table horizontal scroll on mobile (exclude calendar) */
+  table:not(.rdp-month_grid) {
     display: block;
     overflow-x: auto;
     white-space: nowrap;

@@ -136,21 +136,22 @@ class TradeAnalyzer:
     ) -> List[Tuple[UUID, Optional[LLMAnalysisResult]]]:
         """
         批量分析多条交易记录（并行 + 信号量限流）。
-
-        Args:
-            db: 数据库会话
-            trade_ids: 要分析的交易 ID 列表
-            max_concurrent: 最大并发数（默认 3，避免 API 限流）
-
-        Returns:
-            [(trade_id, result_or_none), ...]
+        每个并发任务使用独立 db session，避免 asyncpg 单连接并发冲突。
         """
+        from app.db.session import AsyncSessionLocal
+
         semaphore = asyncio.Semaphore(max_concurrent)
 
         async def _analyze_one(tid: UUID) -> Tuple[UUID, Optional[LLMAnalysisResult]]:
             async with semaphore:
-                r = await self.analyze_trade(db, tid, user_id=user_id)
-                return (tid, r)
+                async with AsyncSessionLocal() as session:
+                    try:
+                        r = await self.analyze_trade(session, tid, user_id=user_id)
+                        await session.commit()
+                        return (tid, r)
+                    except Exception:
+                        await session.rollback()
+                        return (tid, None)
 
         tasks = [_analyze_one(tid) for tid in trade_ids]
         gathered = await asyncio.gather(*tasks)

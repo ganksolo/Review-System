@@ -39,7 +39,9 @@ class TradeService:
 
     # ── CRUD ────────────────────────────────────────────────────────
 
-    async def create_trade(self, user_id: str, data: TradeCreate) -> Trade:
+    async def create_trade(
+        self, user_id: str, data: TradeCreate, base_capital: float = 100000.0
+    ) -> Trade:
         """
         创建交易记录。
         自动计算 PnL、设置 pnl_flag。
@@ -48,7 +50,7 @@ class TradeService:
             user_id=user_id,
             **data.model_dump(),
         )
-        self.calculate_pnl(trade)
+        self.calculate_pnl(trade, base_capital)
         self.db.add(trade)
         await self.db.flush()
         await self.db.refresh(trade)
@@ -112,14 +114,14 @@ class TradeService:
         return trade
 
     async def update_trade(
-        self, user_id: str, trade_id: UUID, data: TradeUpdate
+        self, user_id: str, trade_id: UUID, data: TradeUpdate,
+        base_capital: float = 100000.0,
     ) -> Trade:
         """
         乐观锁更新。
         version 不匹配则抛出 OptimisticLockError。
         更新后自动重算 PnL。
         """
-        # 查找记录（包含 version 匹配检查）
         stmt = select(Trade).where(
             Trade.id == trade_id,
             Trade.user_id == user_id,
@@ -131,19 +133,16 @@ class TradeService:
         if not trade:
             raise TradeNotFoundError(trade_id)
 
-        # 乐观锁检查
         if trade.version != data.version:
             raise OptimisticLockError(
                 expected=data.version, actual=trade.version
             )
 
-        # 应用更新（只更新非 None 字段）
         update_data = data.model_dump(exclude_unset=True, exclude={"version"})
         for field, value in update_data.items():
             setattr(trade, field, value)
 
-        # 重算 PnL
-        self.calculate_pnl(trade)
+        self.calculate_pnl(trade, base_capital)
 
         await self.db.flush()
         await self.db.refresh(trade)
@@ -174,7 +173,8 @@ class TradeService:
         return trade
 
     async def bulk_create_trades(
-        self, user_id: str, data_list: List[TradeCreate]
+        self, user_id: str, data_list: List[TradeCreate],
+        base_capital: float = 100000.0,
     ) -> Tuple[List[Trade], List[Dict]]:
         """
         批量创建交易记录。
@@ -186,7 +186,7 @@ class TradeService:
         for idx, data in enumerate(data_list):
             try:
                 trade = Trade(user_id=user_id, **data.model_dump())
-                self.calculate_pnl(trade)
+                self.calculate_pnl(trade, base_capital)
                 self.db.add(trade)
                 await self.db.flush()
                 await self.db.refresh(trade)
@@ -200,27 +200,28 @@ class TradeService:
 
     # ── PnL 计算 ───────────────────────────────────────────────────
 
-    def calculate_pnl(self, trade: Trade) -> None:
+    def calculate_pnl(self, trade: Trade, base_capital: float = 100000.0) -> None:
         """
         计算 pnl_amount, pnl_ratio, pnl_flag。
         公式:
-          pnl_amount = (exit_price - entry_price) * position_size - slippage
-          pnl_ratio = pnl_amount / (entry_price * position_size) * 100
+          持仓金额 = base_capital * (position_size / 100)
+          持仓股数 = 持仓金额 / entry_price
+          pnl_amount = (exit_price - entry_price) * 持仓股数 - slippage
+          pnl_ratio  = pnl_amount / 持仓金额 * 100
         """
         if trade.exit_price and trade.entry_price and trade.position_size:
             slippage = trade.slippage or 0.0
-            trade.pnl_amount = (
-                (trade.exit_price - trade.entry_price)
-                * trade.position_size
-                - slippage
+            position_value = base_capital * (trade.position_size / 100.0)
+            shares = position_value / trade.entry_price
+            trade.pnl_amount = round(
+                (trade.exit_price - trade.entry_price) * shares - slippage, 2
             )
-            denominator = trade.entry_price * trade.position_size
-            if denominator > 0:
-                trade.pnl_ratio = (trade.pnl_amount / denominator) * 100
+            if position_value > 0:
+                trade.pnl_ratio = round(
+                    (trade.pnl_amount / position_value) * 100, 2
+                )
             else:
                 trade.pnl_ratio = 0.0
-
-            # pnl_flag 由 Trade 模型的 @validates('pnl_amount') 自动设置
 
     # ── 规则库查询 ──────────────────────────────────────────────────
 

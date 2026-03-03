@@ -63,7 +63,6 @@ async def batch_analyze(
     results = await trade_analyzer.analyze_batch(
         db, req.trade_ids, req.max_concurrent, user_id=str(current_user.id)
     )
-    await db.commit()
 
     succeeded = [(str(tid), r.model_dump()) for tid, r in results if r is not None]
     failed = [str(tid) for tid, r in results if r is None]

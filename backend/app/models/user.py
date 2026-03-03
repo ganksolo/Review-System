@@ -4,7 +4,7 @@ User ORM model — maps to the `users` PostgreSQL table.
 
 import uuid
 
-from sqlalchemy import Boolean, Column, String
+from sqlalchemy import Boolean, Column, Float, String
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.sql import func
 
@@ -19,6 +19,10 @@ class User(Base):
     username = Column(String(100), nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    base_capital = Column(
+        Float, nullable=False, default=100000.0, server_default="100000",
+        comment="模拟总资金",
+    )
     created_at = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

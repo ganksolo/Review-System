@@ -163,6 +163,18 @@ export const llmConfigApi = {
         }),
 };
 
+// ── User Settings API ────────────────────────────────────────
+
+import type { User } from "@/types/auth";
+
+export const userApi = {
+    updateSettings: (data: { base_capital: number }) =>
+        apiClient<StandardResponse<User>>("/api/auth/me/settings", {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        }),
+};
+
 // ── Rules API ─────────────────────────────────────────────────
 
 export const rulesApi = {

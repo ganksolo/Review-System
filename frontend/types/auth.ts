@@ -3,6 +3,7 @@ export interface User {
     email: string;
     username: string;
     is_active: boolean;
+    base_capital: number;
 }
 
 export interface LoginRequest {

@@ -9,8 +9,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { tradeCreateSchema, type TradeFormValues } from "@/lib/validations/trade";
 import { useCreateTrade } from "@/lib/hooks/useTrades";
+import DateTimePicker from "@/components/DateTimePicker";
 import {
     ACCOUNT_TYPES,
     TRADE_CYCLES,
@@ -44,13 +46,12 @@ export default function NewTradePage() {
     const [step, setStep] = useState(0);
     const createMutation = useCreateTrade();
 
-    const draft = loadDraft();
-
     const {
         register,
         handleSubmit,
         watch,
         setValue,
+        reset,
         trigger,
         formState: { errors },
     } = useForm<TradeFormValues>({
@@ -63,9 +64,30 @@ export default function NewTradePage() {
             strategy_pattern: [],
             environment_mismatch_flag: false,
             permanent_exclusion_flag: false,
-            ...draft,
         },
     });
+
+    // Client-only: restore draft or set today as default entry_date
+    useEffect(() => {
+        const draft = loadDraft();
+        if (draft) {
+            reset({
+                account_type: "短线账户",
+                trade_cycle: "短线",
+                position_size: 10,
+                selection_dimension: [],
+                strategy_pattern: [],
+                environment_mismatch_flag: false,
+                permanent_exclusion_flag: false,
+                ...draft,
+            });
+            if (!draft.entry_date) {
+                setValue("entry_date", `${format(new Date(), "yyyy-MM-dd")}T09:30`);
+            }
+        } else {
+            setValue("entry_date", `${format(new Date(), "yyyy-MM-dd")}T09:30`);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Auto-save draft on change
     useEffect(() => {
@@ -186,10 +208,18 @@ export default function NewTradePage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField label="买入时间" error={errors.entry_date?.message} required>
-                                    <input type="datetime-local" {...register("entry_date")} className="form-input" />
+                                    <DateTimePicker
+                                        value={watch("entry_date")}
+                                        onChange={(v) => setValue("entry_date", v, { shouldValidate: true })}
+                                        placeholder="选择买入时间"
+                                    />
                                 </FormField>
                                 <FormField label="卖出时间" error={errors.exit_date?.message}>
-                                    <input type="datetime-local" {...register("exit_date")} className="form-input" />
+                                    <DateTimePicker
+                                        value={watch("exit_date")}
+                                        onChange={(v) => setValue("exit_date", v, { shouldValidate: true })}
+                                        placeholder="选择卖出时间"
+                                    />
                                 </FormField>
                             </div>
 

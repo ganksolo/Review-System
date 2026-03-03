@@ -2,13 +2,6 @@
 Prompt template management for trade analysis.
 """
 
-import json
-
-from app.llm.schemas import LLMAnalysisResult
-
-# JSON Schema derived from Pydantic model — included in prompt to enforce output format
-_OUTPUT_SCHEMA = LLMAnalysisResult.model_json_schema()
-
 SYSTEM_PROMPT = """你是一位专业的交易分析师，擅长归因分析和交易心理学。
 你的任务是分析交易记录，区分技能与运气，识别认知偏误，并给出可操作的改进建议。
 
@@ -22,11 +15,24 @@ SYSTEM_PROMPT = """你是一位专业的交易分析师，擅长归因分析和�
 
 你必须严格按照指定的 JSON 格式返回结果，不要返回其他任何内容。"""
 
+_OUTPUT_EXAMPLE = """{
+  "result_type": "执行亏损",
+  "error_level": "执行层错误",
+  "environment_mismatch": false,
+  "permanent_exclusion": false,
+  "action_items": ["严格执行止损纪律", "减少冲动追高"],
+  "long_term_insights": ["建立交易检查清单"],
+  "thesis_analysis": "买入论点有一定合理性，但忽视了大盘环境走弱",
+  "cognitive_biases": ["锚定效应", "确认偏误"],
+  "confidence_score": 0.75,
+  "reasoning": "该交易在震荡市中追高买入，缺乏明确止损计划..."
+}"""
+
 
 def build_analysis_prompt(trade_data: dict) -> str:
     """构建交易分析的 user prompt。"""
 
-    trade_info = f"""## 交易数据
+    return f"""## 交易数据
 - 股票: {trade_data.get('stock_code', '?')} ({trade_data.get('stock_name', '?')})
 - 账户类型: {trade_data.get('account_type', '?')}
 - 交易周期: {trade_data.get('trade_cycle', '?')}
@@ -46,9 +52,19 @@ def build_analysis_prompt(trade_data: dict) -> str:
 - 用户自评正确行为: {trade_data.get('correct_action', '未填写')}
 
 ## 输出格式要求
-请严格按照以下 JSON Schema 返回结果：
-{json.dumps(_OUTPUT_SCHEMA, ensure_ascii=False, indent=2)}
+请严格按照以下 JSON 格式返回，所有字段必须填写：
+{_OUTPUT_EXAMPLE}
+
+字段说明：
+- result_type: "正确盈利" / "运气盈利" / "执行亏损" / "模式亏损"
+- error_level: "执行层错误" / "模式层错误" / "环境层错误" / null
+- environment_mismatch: true/false
+- permanent_exclusion: true/false
+- action_items: 1-3 条可操作建议的数组
+- long_term_insights: 1-2 条长期改进方向的数组
+- thesis_analysis: 买入论点评估文字
+- cognitive_biases: 识别的认知偏误数组（可为空数组）
+- confidence_score: 0-1 之间的数字
+- reasoning: 推理过程说明
 
 只返回 JSON，不要有任何其他文字。"""
-
-    return trade_info

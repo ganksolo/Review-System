@@ -54,5 +54,17 @@ class UserResponse(BaseModel):
     email: str
     username: str
     is_active: bool
+    base_capital: float = 100000.0
 
     model_config = {"from_attributes": True}
+
+
+class UserSettingsUpdate(BaseModel):
+    base_capital: float
+
+    @field_validator("base_capital")
+    @classmethod
+    def capital_positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("模拟资金必须大于 0")
+        return v

@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     # JWT Authentication
     JWT_SECRET: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_EXPIRE_MINUTES: int = 30
-    JWT_REFRESH_EXPIRE_DAYS: int = 7
+    JWT_ACCESS_EXPIRE_MINUTES: int = 1440
+    JWT_REFRESH_EXPIRE_DAYS: int = 30
 
     # Application
     API_VERSION: str = "1.0.0"

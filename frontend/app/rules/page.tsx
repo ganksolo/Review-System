@@ -31,7 +31,7 @@ export default function RulesPage() {
     const { data: correctData, isLoading: loadingCorrect } = useCorrectBehaviors();
     const { data: mismatchData, isLoading: loadingMismatch } = useEnvironmentMismatches();
 
-    const { data: tradesData } = useTrades({ page_size: "200" });
+    const { data: tradesData } = useTrades({ page_size: "100" });
     const batchAnalyze = useBatchAnalyze();
 
     const summary = summaryData?.data;

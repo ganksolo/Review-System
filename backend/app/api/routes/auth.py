@@ -25,6 +25,7 @@ from app.schemas.auth import (
     RefreshRequest,
     RegisterRequest,
     UserResponse,
+    UserSettingsUpdate,
 )
 from app.schemas.common import StandardResponse
 
@@ -148,4 +149,24 @@ async def get_me(current_user: User = Depends(get_current_user)):
         success=True,
         data=UserResponse.model_validate(current_user),
         message="获取用户信息成功",
+    )
+
+
+@router.patch(
+    "/me/settings",
+    response_model=StandardResponse[UserResponse],
+    summary="更新用户设置",
+)
+async def update_settings(
+    data: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user.base_capital = data.base_capital
+    await db.flush()
+    await db.refresh(current_user)
+    return StandardResponse(
+        success=True,
+        data=UserResponse.model_validate(current_user),
+        message="设置更新成功",
     )

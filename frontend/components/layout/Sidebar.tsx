@@ -19,11 +19,13 @@ import {
     LogOut,
     Menu,
     Settings,
+    Wallet,
     X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import LLMConfigDialog from "@/components/LLMConfigDialog";
+import AccountSettingsDialog from "@/components/AccountSettingsDialog";
 
 const navItems = [
     { href: "/", label: "仪表板", icon: LayoutDashboard },
@@ -37,6 +39,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [showLLMConfig, setShowLLMConfig] = useState(false);
+    const [showAccountSettings, setShowAccountSettings] = useState(false);
     const { user, logout } = useAuth();
 
     // Close sidebar on route change (mobile)
@@ -151,6 +154,13 @@ export default function Sidebar() {
                     style={{ borderColor: "var(--color-border)" }}
                 >
                     <button
+                        onClick={() => setShowAccountSettings(true)}
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-primary-glow)] hover:text-[var(--color-primary-light)]"
+                    >
+                        <Wallet className="h-[18px] w-[18px]" />
+                        账户设置
+                    </button>
+                    <button
                         onClick={() => setShowLLMConfig(true)}
                         className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-primary-glow)] hover:text-[var(--color-primary-light)]"
                     >
@@ -192,7 +202,8 @@ export default function Sidebar() {
                 )}
             </aside>
 
-            {/* LLM Config Dialog */}
+            {/* Dialogs */}
+            <AccountSettingsDialog open={showAccountSettings} onClose={() => setShowAccountSettings(false)} />
             <LLMConfigDialog open={showLLMConfig} onClose={() => setShowLLMConfig(false)} />
         </>
     );

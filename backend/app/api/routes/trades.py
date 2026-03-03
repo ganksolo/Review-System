@@ -60,7 +60,9 @@ async def create_trade(
     current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.create_trade(str(current_user.id), data)
+    trade = await service.create_trade(
+        str(current_user.id), data, current_user.base_capital
+    )
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),
@@ -83,7 +85,7 @@ async def bulk_create_trades(
     service: TradeService = Depends(get_service),
 ):
     successes, failures = await service.bulk_create_trades(
-        str(current_user.id), body.trades
+        str(current_user.id), body.trades, current_user.base_capital
     )
     result = BulkCreateResponse(
         success_count=len(successes),
@@ -198,7 +200,9 @@ async def import_trades_csv(
                 continue
 
             trade_data = TradeCreate(**parsed)
-            await service.create_trade(str(current_user.id), trade_data)
+            await service.create_trade(
+                str(current_user.id), trade_data, current_user.base_capital
+            )
             success_count += 1
         except Exception as e:
             _logger.warning("CSV import row %d failed: %s", i, e)
@@ -306,7 +310,9 @@ async def update_trade(
     current_user: User = Depends(get_current_user),
     service: TradeService = Depends(get_service),
 ):
-    trade = await service.update_trade(str(current_user.id), trade_id, data)
+    trade = await service.update_trade(
+        str(current_user.id), trade_id, data, current_user.base_capital
+    )
     return StandardResponse(
         success=True,
         data=TradeResponse.model_validate(trade),

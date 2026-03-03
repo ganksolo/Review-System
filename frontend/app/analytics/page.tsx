@@ -38,7 +38,7 @@ const TOOLTIP_STYLE = {
 };
 
 export default function AnalyticsPage() {
-    const { data: tradesData, isLoading } = useTrades({ page_size: "200", sort_by: "entry_date", order: "asc" });
+    const { data: tradesData, isLoading } = useTrades({ page_size: "100", sort_by: "entry_date", order: "asc" });
     const { data: rulesData } = useRulesSummary();
 
     const trades = tradesData?.data ?? [];

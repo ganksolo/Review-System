@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { tradeCreateSchema, type TradeFormValues } from "@/lib/validations/trade";
 import { useTrade, useUpdateTrade } from "@/lib/hooks/useTrades";
+import DateTimePicker from "@/components/DateTimePicker";
 import {
     ACCOUNT_TYPES,
     TRADE_CYCLES,
@@ -44,6 +45,8 @@ export default function EditTradePage({
         register,
         handleSubmit,
         reset,
+        watch,
+        setValue,
         formState: { errors, isDirty },
     } = useForm<TradeFormValues>({
         resolver: zodResolver(tradeCreateSchema) as any,
@@ -153,8 +156,25 @@ export default function EditTradePage({
                         <FormInput label="股票代码" {...register("stock_code")} error={errors.stock_code?.message} />
                         <FormInput label="股票名称" {...register("stock_name")} />
                         <FormSelect label="交易周期" options={TRADE_CYCLES} {...register("trade_cycle")} error={errors.trade_cycle?.message} />
-                        <FormInput label="买入时间" type="datetime-local" {...register("entry_date")} error={errors.entry_date?.message} />
-                        <FormInput label="卖出时间" type="datetime-local" {...register("exit_date")} />
+                        <div>
+                            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">买入时间</label>
+                            <DateTimePicker
+                                value={watch("entry_date")}
+                                onChange={(v) => setValue("entry_date", v, { shouldValidate: true, shouldDirty: true })}
+                                placeholder="选择买入时间"
+                            />
+                            {errors.entry_date?.message && (
+                                <p className="mt-1 text-xs" style={{ color: "var(--color-bearish)" }}>{errors.entry_date.message}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-[var(--color-text-muted)]">卖出时间</label>
+                            <DateTimePicker
+                                value={watch("exit_date")}
+                                onChange={(v) => setValue("exit_date", v, { shouldValidate: true, shouldDirty: true })}
+                                placeholder="选择卖出时间"
+                            />
+                        </div>
                         <FormInput label="买入价" type="number" step="0.01" {...register("entry_price", { valueAsNumber: true })} error={errors.entry_price?.message} />
                         <FormInput label="卖出价" type="number" step="0.01" {...register("exit_price", { valueAsNumber: true })} />
                         <FormInput label="仓位%" type="number" {...register("position_size", { valueAsNumber: true })} error={errors.position_size?.message} />
