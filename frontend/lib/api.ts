@@ -130,6 +130,39 @@ export const llmApi = {
         }>>("/api/llm/cost"),
 };
 
+// ── LLM Config API ───────────────────────────────────────────
+
+export interface LLMConfigData {
+    id: string;
+    provider: string;
+    masked_key: string;
+    base_url: string | null;
+    model_name: string | null;
+    is_active: boolean;
+}
+
+export const llmConfigApi = {
+    get: () =>
+        apiClient<StandardResponse<LLMConfigData | null>>("/api/llm-config"),
+
+    save: (data: { provider: string; api_key: string; base_url?: string; model_name?: string }) =>
+        apiClient<StandardResponse<LLMConfigData>>("/api/llm-config", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    update: (data: { provider?: string; api_key?: string; base_url?: string; model_name?: string }) =>
+        apiClient<StandardResponse<LLMConfigData>>("/api/llm-config", {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+
+    delete: (id: string) =>
+        apiClient<StandardResponse<void>>(`/api/llm-config/${id}`, {
+            method: "DELETE",
+        }),
+};
+
 // ── Rules API ─────────────────────────────────────────────────
 
 export const rulesApi = {

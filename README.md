@@ -81,6 +81,7 @@ cp .env.example .env
 # 编辑 .env，需要配置:
 # DATABASE_URL=postgresql+asyncpg://你的用户名@localhost:5432/trading_review_system
 # JWT_SECRET=你的随机密钥字符串（生产环境请使用强随机值）
+# ENCRYPTION_KEY=Fernet密钥（用于加密API Key，生成命令见 .env.example）
 
 # 执行数据库迁移
 alembic upgrade head

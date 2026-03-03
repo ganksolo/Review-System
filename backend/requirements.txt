@@ -21,6 +21,9 @@ email-validator==2.3.0
 # HTTP Client
 httpx==0.28.1
 
+# Encryption
+cryptography>=44.0.0
+
 # LLM Integration
 openai==1.59.9
 

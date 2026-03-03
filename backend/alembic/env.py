@@ -25,6 +25,7 @@ if config.config_file_name is not None:
 from app.models.base import Base
 from app.models.trade import Trade  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.llm_config import LLMConfig  # noqa: F401
 
 target_metadata = Base.metadata
 

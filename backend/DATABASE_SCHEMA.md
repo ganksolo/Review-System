@@ -114,6 +114,22 @@
 | created_at | TIMESTAMP(tz) | 创建时间 |
 | updated_at | TIMESTAMP(tz) | 更新时间 |
 
+## LLM 配置模型: LLMConfig
+
+`llm_configs` 表存储用户级 LLM 提供商配置，API Key 使用 Fernet 加密。
+
+| 字段 | 类型 | 说明 |
+| ---- | ---- | ---- |
+| id | UUID | 主键，自动生成 UUID v4 |
+| user_id | UUID | 外键关联 users.id，带索引 |
+| provider | String(50) | 提供商 (openai/deepseek/anthropic/gemini/custom) |
+| encrypted_key | Text | Fernet 加密后的 API Key |
+| base_url | String(500) | 自定义 API 端点（可选） |
+| model_name | String(200) | 模型名称（可选） |
+| is_active | Boolean | 是否活跃（默认 true） |
+| created_at | TIMESTAMP(tz) | 创建时间 |
+| updated_at | TIMESTAMP(tz) | 更新时间 |
+
 ## 特性
 
 ### 软删除
@@ -183,7 +199,8 @@ backend/
 │   │   ├── base.py          # SQLAlchemy DeclarativeBase
 │   │   ├── enums.py         # 所有枚举定义
 │   │   ├── trade.py         # Trade ORM 模型
-│   │   └── user.py          # User ORM 模型
+│   │   ├── user.py          # User ORM 模型
+│   │   └── llm_config.py    # LLMConfig ORM 模型（加密 API Key）
 │   ├── schemas/
 │   │   ├── auth.py          # 认证相关 Pydantic schemas
 │   │   └── trade.py         # Pydantic 验证 schemas
@@ -193,6 +210,7 @@ backend/
 │   │   └── session.py       # 数据库会话管理
 │   └── core/
 │       ├── auth.py          # get_current_user 依赖注入
+│       ├── encryption.py    # Fernet 加密/解密工具
 │       ├── errors.py        # 自定义异常
 │       └── security.py      # JWT + bcrypt 工具函数
 ├── alembic/

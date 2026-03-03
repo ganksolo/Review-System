@@ -15,11 +15,13 @@ from app.models.enums import (
 )
 from app.models.trade import Trade
 from app.models.user import User
+from app.models.llm_config import LLMConfig
 
 __all__ = [
     "Base",
     "Trade",
     "User",
+    "LLMConfig",
     "LLMAnalysisStatus",
     "AccountType",
     "TradeCycle",

@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 60
     LLM_MAX_TOKENS: int = 4096
 
+    # Encryption (Fernet key for API key storage)
+    ENCRYPTION_KEY: str = ""
+
     # JWT Authentication
     JWT_SECRET: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"

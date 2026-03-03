@@ -18,10 +18,12 @@ import {
     List,
     LogOut,
     Menu,
+    Settings,
     X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import LLMConfigDialog from "@/components/LLMConfigDialog";
 
 const navItems = [
     { href: "/", label: "仪表板", icon: LayoutDashboard },
@@ -34,6 +36,7 @@ const navItems = [
 export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const [showLLMConfig, setShowLLMConfig] = useState(false);
     const { user, logout } = useAuth();
 
     // Close sidebar on route change (mobile)
@@ -142,13 +145,21 @@ export default function Sidebar() {
                         );
                     })}
                 </nav>
-                {/* Footer */}
-                {/* 版本信息区域：显示当前系统版本号，仅供用户和开发者参考 */}
+                {/* AI Config + Footer */}
                 <div
-                    className="border-t px-5 py-3 text-xs text-[var(--color-text-muted)]"
+                    className="space-y-2 border-t px-3 py-3"
                     style={{ borderColor: "var(--color-border)" }}
                 >
-                    Trading Review v1.0
+                    <button
+                        onClick={() => setShowLLMConfig(true)}
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-primary-glow)] hover:text-[var(--color-primary-light)]"
+                    >
+                        <Settings className="h-[18px] w-[18px]" />
+                        AI 模型配置
+                    </button>
+                    <div className="px-3 text-xs text-[var(--color-text-muted)]">
+                        Trading Review v1.0
+                    </div>
                 </div>
                 {/* User info + Logout */}
                 {user && (
@@ -180,6 +191,9 @@ export default function Sidebar() {
                     </div>
                 )}
             </aside>
+
+            {/* LLM Config Dialog */}
+            <LLMConfigDialog open={showLLMConfig} onClose={() => setShowLLMConfig(false)} />
         </>
     );
 }

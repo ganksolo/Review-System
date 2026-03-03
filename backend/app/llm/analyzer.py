@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.llm.client import llm_client
+from app.llm.client import llm_client, resolve_llm_config
 from app.llm.cost_tracker import cost_tracker
 from app.llm.prompts import SYSTEM_PROMPT, build_analysis_prompt
 from app.llm.schemas import LLMAnalysisResult
@@ -75,6 +75,13 @@ class TradeAnalyzer:
             # 3. 构建 prompt
             user_prompt = build_analysis_prompt(trade_data)
 
+            # 3.5 解析用户级 LLM 配置 (DB → env → error)
+            llm_config = None
+            try:
+                llm_config = await resolve_llm_config(db, user_id)
+            except Exception as cfg_err:
+                logger.warning("LLM config resolve failed, using default: %s", cfg_err)
+
             # 4. 调用 LLM
             llm_response = await llm_client.chat(
                 messages=[
@@ -83,6 +90,7 @@ class TradeAnalyzer:
                 ],
                 temperature=0.3,
                 response_format={"type": "json_object"},
+                config=llm_config,
             )
 
             # 5. 记录成本
